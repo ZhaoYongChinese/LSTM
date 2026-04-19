@@ -80,7 +80,7 @@ def load_model(checkpoint_path, device='cpu', default_seq_len=None, default_outp
         if output_size is None:
             raise ValueError("模型文件中缺少 output_size，请在 test.py 中设置 DEFAULT_OUTPUT_SIZE。")
 
-    # ---------- 7. 实例化模型 ----------
+    # ---------- 6. 实例化模型 ----------
     if model_type == 'Seq2SeqLSTM':
         model = Seq2SeqLSTM(
             input_size=1,
@@ -90,7 +90,11 @@ def load_model(checkpoint_path, device='cpu', default_seq_len=None, default_outp
             dropout=dropout
         )
     else:
-        use_layer_norm = params.get('use_layer_norm', False)
+        # 推断是否使用 LayerNorm（优先级：params > state_dict 检测 > 默认值）
+        use_layer_norm = params.get('use_layer_norm')
+        if use_layer_norm is None:
+            # 如果 state_dict 中有 "layer_norm" 开头的键，说明启用了 LayerNorm
+            use_layer_norm = any(k.startswith('layer_norm') for k in state_dict.keys())
         model = LSTMMultiStep(
             input_size=1,
             hidden_size=hidden_size,
@@ -199,8 +203,8 @@ def create_animation(model, scaler_X, scaler_y, seq_len, output_size,
 
 def main():
     # ==================== 用户配置区域 ====================
-    MODEL_PATH = r"result/temporal/Seq2SeqLSTM_h16_l1_drop0.4_lr0.0005_huber_mape1.99.pth"
-    TEST_CSV = r"data/elevator/9天rms值(1).csv"
+    MODEL_PATH = r"汇报/测试/LSTM_h32_l2_drop0.5_lr0.0005_mse_mape1.29.pth"
+    TEST_CSV = r"data/show/测试.csv"
     TARGET_COLUMN = 'RMS_Value'
     OUTPUT_GIF = "prediction_animation.gif"
     FPS = 2

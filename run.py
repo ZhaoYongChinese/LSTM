@@ -23,7 +23,7 @@ def main():
     INPUT_SIZE = 1                  # 输入特征维度，单变量时为1
     HIDDEN_SIZE = [16, 32]         # 隐藏层大小，建议使用较大值以提升模型表达能力，尤其是 Seq2Seq 模型可能受益更多
     NUM_LAYERS = [2, 1]          # 建议使用多层以配合 dropout
-    DROPOUT = [0.5,0.6,0.4]                    # 建议使用较大 dropout 以防过拟合，尤其是 Seq2Seq 模型
+    DROPOUT = [0.5]                    # 建议使用较大 dropout 以防过拟合，尤其是 Seq2Seq 模型
     EPOCHS = 300                            # 最大训练轮数，建议 Seq2Seq 使用较小值以防过拟合
     LEARNING_RATE = [0.0005]         # 可根据模型复杂度调整
     PATIENCE = [15]           # 早停耐心值，建议 Seq2Seq 使用较小值以防过拟合
@@ -32,7 +32,7 @@ def main():
     TEST_SIZE = 0.15                        # 测试集占比
     VAL_SIZE = 0.15               # 验证集占比
     RANDOM_SEED = 42                        # 随机种子
-    DATA_DIR = r"data/elevator"            # 数据文件夹路径
+    DATA_DIR = r"data/show"            # 数据文件夹路径
     RESULT_ROOT = "result"              # 结果保存根目录
     LOSS_TYPE = ['huber', 'mse']        # 损失函数类型列表（支持网格搜索）
     USE_LAYER_NORM = True               # 仅对 Vanilla LSTM 有效
