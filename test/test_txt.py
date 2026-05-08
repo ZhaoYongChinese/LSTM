@@ -12,7 +12,7 @@ from datetime import datetime
 from test import load_model, compute_mape, predict_sequence
 
 
-def generate_report(model_path, test_csv, target_col, default_seq_len=144, default_output_size=72, output_txt=None):
+def generate_report(model_path, test_csv, target_col, default_seq_len=72, default_output_size=36, output_txt=None):
     """
     生成详细的预测报告文本文件
     """
@@ -149,8 +149,8 @@ def main():
     parser.add_argument('--test_csv', type=str, required=True, help='测试数据CSV文件路径')
     parser.add_argument('--target_col', type=str, default='RMS_Value', help='目标列名')
     parser.add_argument('--output', type=str, default=None, help='输出报告文件名（可选）')
-    parser.add_argument('--seq_len', type=int, default=144, help='默认输入序列长度（用于旧模型）')
-    parser.add_argument('--output_size', type=int, default=72, help='默认输出长度（用于旧模型）')
+    parser.add_argument('--seq_len', type=int, default=72, help='默认输入序列长度（用于旧模型）')
+    parser.add_argument('--output_size', type=int, default=36, help='默认输出长度（用于旧模型）')
 
     args = parser.parse_args()
 

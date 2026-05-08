@@ -27,12 +27,12 @@ def main():
     EPOCHS = 300                            # 最大训练轮数，建议 Seq2Seq 使用较小值以防过拟合
     LEARNING_RATE = [0.0005]         # 可根据模型复杂度调整
     PATIENCE = [15]           # 早停耐心值，建议 Seq2Seq 使用较小值以防过拟合
-    SEQ_LENGTH = 144                       # 输入序列长度（历史时间步数）
-    OUTPUT_SIZE = 72            # 输出序列长度（预测未来时间步数）
+    SEQ_LENGTH = 72                       # 输入序列长度（历史时间步数）
+    OUTPUT_SIZE = 36            # 输出序列长度（预测未来时间步数）
     TEST_SIZE = 0.15                        # 测试集占比
     VAL_SIZE = 0.15               # 验证集占比
     RANDOM_SEED = 42                        # 随机种子
-    DATA_DIR = r"data/show"            # 数据文件夹路径
+    DATA_DIR = r"data/normal"            # 数据文件夹路径
     RESULT_ROOT = "result"              # 结果保存根目录
     LOSS_TYPE = ['huber', 'mse']        # 损失函数类型列表（支持网格搜索）
     USE_LAYER_NORM = True               # 仅对 Vanilla LSTM 有效

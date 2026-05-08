@@ -176,6 +176,7 @@ def create_animation(model, scaler_X, scaler_y, seq_len, output_size,
         ax.plot(x_future, pred, 'r--', label='Predicted', linewidth=2)
         ax.axvline(x=start_idx + seq_len - 1, color='gray', linestyle=':', alpha=0.7)
 
+        ax.set_ylim(0.03, 0.07)
         ax.legend(loc='upper left')
         ax.set_xlabel('Time Step (index)')
         # ax.set_ylabel('Value')
@@ -203,15 +204,15 @@ def create_animation(model, scaler_X, scaler_y, seq_len, output_size,
 
 def main():
     # ==================== 用户配置区域 ====================
-    MODEL_PATH = r"汇报/测试/LSTM_h32_l2_drop0.5_lr0.0005_mse_mape1.29.pth"
-    TEST_CSV = r"data/show/测试.csv"
+    MODEL_PATH = r"汇报/normal/LSTM_h32_l2_drop0.5_lr0.0005_mse_mape1.15.pth"
+    TEST_CSV = r"data/normal/normal.csv"
     TARGET_COLUMN = 'RMS_Value'
     OUTPUT_GIF = "prediction_animation.gif"
     FPS = 2
 
     # 旧模型后备参数（当checkpoint中缺失时使用）
-    DEFAULT_SEQ_LENGTH = 144
-    DEFAULT_OUTPUT_SIZE = 72
+    DEFAULT_SEQ_LENGTH = 72
+    DEFAULT_OUTPUT_SIZE = 36
     # =====================================================
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

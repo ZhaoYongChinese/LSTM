@@ -19,12 +19,12 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 # ========== 配置参数（和LSTM完全对齐） ==========
-DATA_PATH = "data/elevator/9天rms值(1).csv"
+DATA_PATH = "data/normal/normal.csv"
 TARGET_COL = "RMS_Value"
 
 # 和LSTM完全一致的序列长度
-SEQ_LENGTH = 144    # 历史输入长度
-OUTPUT_SIZE = 72    # 预测步长
+SEQ_LENGTH = 72    # 历史输入长度
+OUTPUT_SIZE = 36    # 预测步长
 TRAIN_RATIO = 0.7   # 训练集比例（用于预训练最优阶数，不参与滑动预测）
 
 # 阶数搜索范围
@@ -201,6 +201,7 @@ def create_animation_gif(series, seq_len, pred_len, window_results, save_path="r
         ax.axvline(x=hist_end - 1, color='gray', linestyle=':', alpha=0.7)
         
         # 美化
+        ax.set_ylim(0.03, 0.07)  # 根据数据范围调整
         ax.legend(loc='upper left')
         ax.set_xlabel('Time Step (index)')
         ax.set_ylabel('RMS Value')
