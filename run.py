@@ -1,14 +1,36 @@
 import os
+import yaml
 import torch
 import itertools
 import numpy as np
 import pandas as pd
+import tkinter as tk
+from tkinter import filedialog
 
 from utils.data_loader import load_multiple_csv
 from utils.trainer import train_model, evaluate_model, save_model
-from utils.plotting import plot_loss_curves  # 新增导入
+from utils.plotting import plot_loss_curves
 from models.LSTM.model import LSTMMultiStep, Seq2SeqLSTM
 
+def get_data_dir_via_gui(configured_path):
+    """
+    检查配置文件中的路径是否有效。若无效或为空，则弹出系统原生文件夹选择框。
+    """
+    if configured_path and os.path.exists(configured_path):
+        return configured_path
+        
+    print("\n[系统提示] 数据目录未配置或路径不存在，请在弹出的窗口中选择包含CSV数据的文件夹...")
+    root = tk.Tk()
+    root.withdraw()           # 隐藏主窗口
+    root.attributes('-topmost', True) # 将弹窗置顶，防止被终端窗口遮挡
+    
+    selected_dir = filedialog.askdirectory(title="请选择数据文件夹(DATA_DIR)")
+    root.destroy()
+    
+    if not selected_dir:
+        raise ValueError("您取消了文件夹选择，程序终止。")
+    print(f"[系统提示] 成功选择数据路径: {selected_dir}")
+    return selected_dir
 
 def main():
     print("=" * 60)
@@ -18,29 +40,20 @@ def main():
     print("=" * 60)
     choice = input("请输入模型编号 (1/2): ").strip()
 
-    # ==================== 超参数配置（可按需修改） ====================
-    TARGET_COLUMN = 'RMS_Value'         # 预测目标列名，需与 CSV 文件中的列名一致
-    INPUT_SIZE = 1                  # 输入特征维度，单变量时为1
-    HIDDEN_SIZE = [16, 32]         # 隐藏层大小，建议使用较大值以提升模型表达能力，尤其是 Seq2Seq 模型可能受益更多
-    NUM_LAYERS = [2, 1]          # 建议使用多层以配合 dropout
-    DROPOUT = [0.5]                    # 建议使用较大 dropout 以防过拟合，尤其是 Seq2Seq 模型
-    EPOCHS = 300                            # 最大训练轮数，建议 Seq2Seq 使用较小值以防过拟合
-    LEARNING_RATE = [0.0005]         # 可根据模型复杂度调整
-    PATIENCE = [15]           # 早停耐心值，建议 Seq2Seq 使用较小值以防过拟合
-    SEQ_LENGTH = 72                       # 输入序列长度（历史时间步数）
-    OUTPUT_SIZE = 36            # 输出序列长度（预测未来时间步数）
-    TEST_SIZE = 0.15                        # 测试集占比
-    VAL_SIZE = 0.15               # 验证集占比
-    RANDOM_SEED = 42                        # 随机种子
-    DATA_DIR = r"data/normal"            # 数据文件夹路径
-    RESULT_ROOT = "result"              # 结果保存根目录
-    LOSS_TYPE = ['huber', 'mse']        # 损失函数类型列表（支持网格搜索）
-    USE_LAYER_NORM = True               # 仅对 Vanilla LSTM 有效
-    GRAD_CLIP = 1.0                     # 梯度裁剪阈值
-    # ==============================================================
+    # ---------- 0. 加载 YAML 配置文件 ----------
+    config_path = "config.yml"
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"找不到配置文件: {config_path}。请确保文件存在！")
+        
+    with open(config_path, "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
 
-    torch.manual_seed(RANDOM_SEED)
-    np.random.seed(RANDOM_SEED)
+    # 动态获取并确认数据路径
+    DATA_DIR = get_data_dir_via_gui(cfg.get("data_dir", ""))
+
+    # 设置随机种子和设备
+    torch.manual_seed(cfg['random_seed'])
+    np.random.seed(cfg['random_seed'])
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"使用设备: {device}")
 
@@ -49,12 +62,12 @@ def main():
     (X_train, y_train, X_val, y_val, X_test, y_test,
      scaler_X, scaler_y) = load_multiple_csv(
         data_dir=DATA_DIR,
-        target_col=TARGET_COLUMN,
-        seq_len=SEQ_LENGTH,
-        pred_len=OUTPUT_SIZE,
-        test_size=TEST_SIZE,
-        val_size=VAL_SIZE,
-        random_seed=RANDOM_SEED
+        target_col=cfg['target_column'],
+        seq_len=cfg['seq_length'],
+        pred_len=cfg['output_size'],
+        test_size=cfg['test_size'],
+        val_size=cfg['val_size'],
+        random_seed=cfg['random_seed']
     )
 
     X_train, y_train = X_train.to(device), y_train.to(device)
@@ -65,9 +78,10 @@ def main():
     best_overall_mape = float('inf')
     best_model_info = None
 
-    # 参数组合（注意顺序与解包一致）
+    # 从配置文件读取网格搜索参数
     param_combinations = list(itertools.product(
-        HIDDEN_SIZE, NUM_LAYERS, DROPOUT, LEARNING_RATE, PATIENCE, LOSS_TYPE
+        cfg['hidden_size'], cfg['num_layers'], cfg['dropout'], 
+        cfg['learning_rate'], cfg['patience'], cfg['loss_type']
     ))
     total = len(param_combinations)
     print(f"\n共有 {total} 组参数组合待训练")
@@ -80,18 +94,19 @@ def main():
         # 构建模型
         if choice == '1':
             model = LSTMMultiStep(
-                input_size=INPUT_SIZE,
+                input_size=cfg['input_size'],
                 hidden_size=hidden,
-                output_size=OUTPUT_SIZE,
+                output_size=cfg['output_size'],
                 num_layers=layers,
                 dropout=drop,
-                use_layer_norm=USE_LAYER_NORM
+                use_layer_norm=cfg['use_layer_norm']
             )
         elif choice == '2':
             model = Seq2SeqLSTM(
-                input_size=INPUT_SIZE,
+                input_size=cfg['input_size'],
                 hidden_size=hidden,
-                output_size=OUTPUT_SIZE,
+                output_size=cfg['output_size'],
+                output_feature_size=cfg['output_feature_size'], # 注入新增的维度参数
                 num_layers=layers,
                 dropout=drop
             )
@@ -105,11 +120,11 @@ def main():
             model=model,
             train_data=(X_train, y_train),
             val_data=(X_val, y_val),
-            epochs=EPOCHS,
+            epochs=cfg['epochs'],
             lr=lr,
             patience=patience,
             loss_type=loss_type,
-            grad_clip=GRAD_CLIP
+            grad_clip=cfg['grad_clip']
         )
 
         # 评估（返回 MAPE, MSE, MAE）
@@ -128,7 +143,7 @@ def main():
         base_filename = f"{model_name}_h{hidden}_l{layers}_drop{drop}_lr{lr}_{loss_type}_mape{overall_mape:.2f}"
 
         # 保存到 first 目录（若当前最佳则覆盖更新）
-        first_dir = os.path.join(RESULT_ROOT, "first")
+        first_dir = os.path.join(cfg['result_root'], "first")
         save_path = save_model(
             model=model,
             scaler_X=scaler_X,
@@ -140,8 +155,8 @@ def main():
                 'dropout': drop,
                 'learning_rate': lr,
                 'patience': patience,
-                'seq_len': SEQ_LENGTH,
-                'output_size': OUTPUT_SIZE,
+                'seq_len': cfg['seq_length'],
+                'output_size': cfg['output_size'],
                 'loss_type': loss_type
             },
             overall_mape=overall_mape,
@@ -153,7 +168,7 @@ def main():
 
         # 如果准确率 >= 90%，额外存入 accuracy_high 目录
         if acc >= 90.0:
-            high_dir = os.path.join(RESULT_ROOT, "accuracy_high")
+            high_dir = os.path.join(cfg['result_root'], "accuracy_high")
             save_model(
                 model=model,
                 scaler_X=scaler_X,

@@ -1,0 +1,28 @@
+# 时序预测模型全局配置文件
+
+# 1. 基础配置
+target_column: 'RMS_Value'         # 预测目标列名，需与 CSV 文件中的列名一致
+random_seed: 42                    # 全局随机种子
+data_dir: ""                       # 数据文件夹路径 (留空或路径无效则会弹出GUI让你选择)
+result_root: "result"              # 结果保存根目录
+
+# 2. 模型结构参数 (为了网格搜索，部分参数设计为列表)
+input_size: 1                      # 输入特征维度
+output_feature_size: 1             # 输出特征维度 (主要用于 Seq2Seq 模型解耦)
+hidden_size: [16, 32]              # 隐藏层大小列表
+num_layers: [2, 1]                 # 网络层数列表
+dropout: [0.5]                     # Dropout 比率列表
+use_layer_norm: True               # 仅对 Vanilla LSTM 有效
+
+# 3. 序列长度与数据切分
+seq_length: 72                     # 输入序列长度（历史时间步数）
+output_size: 36                    # 输出序列长度（预测未来时间步数）
+test_size: 0.15                    # 测试集占比
+val_size: 0.15                     # 验证集占比
+
+# 4. 训练过程与优化器参数
+epochs: 300                        # 最大训练轮数
+learning_rate: [0.0005]            # 学习率列表
+patience: [15]                     # 早停耐心值列表
+loss_type: ['huber', 'mse']        # 损失函数类型列表
+grad_clip: 1.0                     # 梯度裁剪阈值
