@@ -1,6 +1,7 @@
 import os
 import yaml
 import torch
+import shutil
 import itertools
 import numpy as np
 import pandas as pd
@@ -13,16 +14,13 @@ from utils.plotting import plot_loss_curves
 from models.LSTM.model import LSTMMultiStep, Seq2SeqLSTM
 
 def get_data_dir_via_gui(configured_path):
-    """
-    检查配置文件中的路径是否有效。若无效或为空，则弹出系统原生文件夹选择框。
-    """
     if configured_path and os.path.exists(configured_path):
         return configured_path
         
     print("\n[系统提示] 数据目录未配置或路径不存在，请在弹出的窗口中选择包含CSV数据的文件夹...")
     root = tk.Tk()
-    root.withdraw()           # 隐藏主窗口
-    root.attributes('-topmost', True) # 将弹窗置顶，防止被终端窗口遮挡
+    root.withdraw()           
+    root.attributes('-topmost', True) 
     
     selected_dir = filedialog.askdirectory(title="请选择数据文件夹(DATA_DIR)")
     root.destroy()
@@ -36,7 +34,7 @@ def main():
     print("=" * 60)
     print("时序预测模型训练 - 请选择模型类型")
     print("1. Vanilla LSTM (直接多步输出)")
-    print("2. Seq2Seq LSTM (Encoder-Decoder)")
+    print("2. Seq2Seq LSTM (Encoder-Decoder + Attention)")
     print("=" * 60)
     choice = input("请输入模型编号 (1/2): ").strip()
 
@@ -48,10 +46,8 @@ def main():
     with open(config_path, "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
 
-    # 动态获取并确认数据路径
     DATA_DIR = get_data_dir_via_gui(cfg.get("data_dir", ""))
 
-    # 设置随机种子和设备
     torch.manual_seed(cfg['random_seed'])
     np.random.seed(cfg['random_seed'])
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -75,23 +71,23 @@ def main():
     X_test, y_test = X_test.to(device), y_test.to(device)
 
     # ---------- 2. 参数网格搜索 ----------
-    best_overall_mape = float('inf')
+    best_overall_r2 = -float('inf') # 🎯 R2 越大越好，初始化为负无穷
     best_model_info = None
 
-    # 从配置文件读取网格搜索参数
     param_combinations = list(itertools.product(
         cfg['hidden_size'], cfg['num_layers'], cfg['dropout'], 
         cfg['learning_rate'], cfg['patience'], cfg['loss_type']
     ))
     total = len(param_combinations)
     print(f"\n共有 {total} 组参数组合待训练")
+    
+    batch_size = cfg.get('batch_size', 64) # 获取批大小配置
 
     for idx, (hidden, layers, drop, lr, patience, loss_type) in enumerate(param_combinations):
         print("\n" + "=" * 50)
         print(f"进度: {idx+1}/{total}")
         print(f"参数: hidden={hidden}, layers={layers}, dropout={drop}, lr={lr}, patience={patience}, loss_type={loss_type}")
 
-        # 构建模型
         if choice == '1':
             model = LSTMMultiStep(
                 input_size=cfg['input_size'],
@@ -106,7 +102,7 @@ def main():
                 input_size=cfg['input_size'],
                 hidden_size=hidden,
                 output_size=cfg['output_size'],
-                output_feature_size=cfg['output_feature_size'], # 注入新增的维度参数
+                output_feature_size=cfg['output_feature_size'], 
                 num_layers=layers,
                 dropout=drop
             )
@@ -115,7 +111,6 @@ def main():
 
         model = model.to(device)
 
-        # 训练
         model, best_val_loss, train_losses, val_losses = train_model(
             model=model,
             train_data=(X_train, y_train),
@@ -123,27 +118,32 @@ def main():
             epochs=cfg['epochs'],
             lr=lr,
             patience=patience,
+            batch_size=batch_size, # 🎯 传入批处理大小
             loss_type=loss_type,
             grad_clip=cfg['grad_clip']
         )
 
-        # 评估（返回 MAPE, MSE, MAE）
-        overall_mape, overall_mse, overall_mae, pred, true = evaluate_model(
+        # 🎯 评估模型，接住新加入的 R2 分数
+        overall_mape, overall_mse, overall_mae, overall_r2, pred, true = evaluate_model(
             model=model,
             X_test=X_test,
             y_test=y_test,
             scaler_y=scaler_y
         )
-        acc = 100 - overall_mape
-        print(f"测试集整体 MAPE: {overall_mape:.2f}% , 准确率: {acc:.2f}% , "
-              f"MSE: {overall_mse:.6f} , MAE: {overall_mae:.6f}")
+        
+        print(f"测试集整体 R² (决定系数): {overall_r2:.4f} , MSE: {overall_mse:.6f} , MAE: {overall_mae:.6f} (辅助MAPE: {overall_mape:.2f}%)")
 
-        # 生成文件名基础部分
         model_name = "LSTM" if choice == '1' else "Seq2SeqLSTM"
-        base_filename = f"{model_name}_h{hidden}_l{layers}_drop{drop}_lr{lr}_{loss_type}_mape{overall_mape:.2f}"
+        base_filename = f"{model_name}_h{hidden}_l{layers}_drop{drop}_lr{lr}_{loss_type}_r2_{overall_r2:.4f}"
 
-        # 保存到 first 目录（若当前最佳则覆盖更新）
-        first_dir = os.path.join(cfg['result_root'], "first")
+        # 🎯 核心修改点：根据 R2 分数进行筛选分类
+        if overall_r2 >= 0.70:
+            current_save_dir = os.path.join(cfg['result_root'], "accuracy_high")
+            print(f"✅ R² 分数 {overall_r2:.4f} >= 0.7，存入 accuracy_high/ 文件夹")
+        else:
+            current_save_dir = os.path.join(cfg['result_root'], "other")
+            print(f"⚠️ R² 分数 {overall_r2:.4f} < 0.7，存入 other/ 文件夹")
+
         save_path = save_model(
             model=model,
             scaler_X=scaler_X,
@@ -157,41 +157,47 @@ def main():
                 'patience': patience,
                 'seq_len': cfg['seq_length'],
                 'output_size': cfg['output_size'],
-                'loss_type': loss_type
+                'loss_type': loss_type,
+                'r2_score': overall_r2 # 记录新指标
             },
-            overall_mape=overall_mape,
-            save_dir=first_dir,
+            overall_r2=overall_r2,
+            save_dir=current_save_dir,
             filename=base_filename + '.pth'
         )
-        # 绘制 Loss 曲线
-        plot_loss_curves(train_losses, val_losses, first_dir, base_filename)
+        plot_loss_curves(train_losses, val_losses, current_save_dir, base_filename)
 
-        # 如果准确率 >= 90%，额外存入 accuracy_high 目录
-        if acc >= 90.0:
-            high_dir = os.path.join(cfg['result_root'], "accuracy_high")
-            save_model(
-                model=model,
-                scaler_X=scaler_X,
-                scaler_y=scaler_y,
-                params={'accuracy': acc},
-                overall_mape=overall_mape,
-                save_dir=high_dir,
-                filename=base_filename + '.pth'
-            )
-            plot_loss_curves(train_losses, val_losses, high_dir, base_filename)
-            print(f"✅ 准确率 {acc:.2f}% >= 90%，已存入 accuracy_high/")
+        # 🎯 核心修改点：记录并更新全局 R2 最高的模型
+        if overall_r2 > best_overall_r2:
+            best_overall_r2 = overall_r2
+            best_model_info = {
+                'path': save_path,
+                'dir': current_save_dir,
+                'base_filename': base_filename,
+                'r2': overall_r2
+            }
 
-        # 更新全局最佳
-        if overall_mape < best_overall_mape:
-            best_overall_mape = overall_mape
-            best_model_info = (save_path, overall_mape)
-
+    # ---------- 3. 筛选结束，将本次运行的最高分模型复制到 first ----------
     print("\n" + "=" * 60)
-    print(f"所有训练完成！最佳模型 MAPE = {best_overall_mape:.2f}%")
     if best_model_info:
-        print(f"最佳模型保存路径: {best_model_info[0]}")
+        print(f"所有训练完成！本次网格搜索最佳模型 R² = {best_overall_r2:.4f}")
+        first_dir = os.path.join(cfg['result_root'], "first")
+        os.makedirs(first_dir, exist_ok=True)
+        
+        best_dir = best_model_info['dir']
+        base_name = best_model_info['base_filename']
+        
+        copied_files = []
+        for file_name in os.listdir(best_dir):
+            if file_name.startswith(base_name):
+                src_path = os.path.join(best_dir, file_name)
+                dst_path = os.path.join(first_dir, file_name)
+                shutil.copy2(src_path, dst_path)
+                copied_files.append(file_name)
+                
+        print(f"🏆 最佳模型(R²={best_overall_r2:.4f})相关文件已成功提拔并复制到: {first_dir}")
+        for cf in copied_files:
+            print(f"  - 复制成功: {cf}")
     print("=" * 60)
-
 
 if __name__ == "__main__":
     main()

@@ -52,9 +52,9 @@ def load_multiple_csv(data_dir, target_col, seq_len, pred_len,
             continue
 
         max_samples = n - min_req_len + 1
-        if max_samples < 100:
+        if max_samples < 1000:
             stride = 1
-        elif max_samples < 500:
+        elif max_samples < 5000:
             stride = 2
         else:
             stride = 10
