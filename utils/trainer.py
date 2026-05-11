@@ -8,16 +8,17 @@ import numpy as np
 # 🎯 核心修改：统一从本地的 metrics.py 中导入所有评价指标
 from .metrics import compute_mape, compute_mse, compute_mae, compute_r2
 
-def train_model(model, train_data, val_data, epochs, lr, patience,
+def train_model(model, train_data, val_data, epochs, lr, patience, device,
                 batch_size=64,
                 loss_type='mse', grad_clip=1.0, step_size=20, gamma=0.9):
     """
     训练模型（已加入 Mini-batch 批处理），支持早停、学习率衰减、梯度裁剪。
+    🎯 修复 OOM 隐患：加入 device 参数，仅在按批次训练时将数据放入 GPU。
     """
     X_train, y_train = train_data
     X_val, y_val = val_data
 
-    # 构建 DataLoader
+    # 构建 DataLoader (此时数据全在 CPU 内存中，不占显存)
     train_dataset = TensorDataset(X_train, y_train)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True) 
 
@@ -46,6 +47,9 @@ def train_model(model, train_data, val_data, epochs, lr, patience,
         epoch_train_loss = 0.0
         
         for batch_X, batch_y in train_loader:
+            # 🎯 核心修复：仅将当前 batch 的数据移动到 GPU 显存
+            batch_X, batch_y = batch_X.to(device), batch_y.to(device)
+
             optimizer.zero_grad()
 
             if use_teacher_forcing:
@@ -70,6 +74,9 @@ def train_model(model, train_data, val_data, epochs, lr, patience,
         epoch_val_loss = 0.0
         with torch.no_grad():
             for batch_X_val, batch_y_val in val_loader:
+                # 🎯 核心修复：验证集也按 batch 放入 GPU
+                batch_X_val, batch_y_val = batch_X_val.to(device), batch_y_val.to(device)
+
                 pred_val = model(batch_X_val)
                 val_loss = criterion(pred_val, batch_y_val)
                 epoch_val_loss += val_loss.item() * batch_X_val.size(0)
@@ -102,13 +109,19 @@ def train_model(model, train_data, val_data, epochs, lr, patience,
         
     return model, best_val_loss, train_losses, val_losses
 
-def evaluate_model(model, X_test, y_test, scaler_y):
+
+def evaluate_model(model, X_test, y_test, scaler_y, device):
     """
     评估模型，返回整体 R2、MAPE、MSE、MAE、预测值和真实值。
+    🎯 修复 OOM 隐患：加入 device 参数。
     """
     model.eval()
     with torch.no_grad():
+        # 🎯 将测试集输入数据移动到 GPU 上进行推理预测
+        X_test = X_test.to(device)
         pred_norm = model(X_test)
+        
+        # 统一转回 cpu numpy 进行反归一化和评价指标计算
         pred = scaler_y.inverse_transform(pred_norm.cpu().numpy())
         true = scaler_y.inverse_transform(y_test.cpu().numpy())
 
@@ -119,6 +132,7 @@ def evaluate_model(model, X_test, y_test, scaler_y):
     overall_mae = compute_mae(true, pred)
     
     return overall_mape, overall_mse, overall_mae, overall_r2, pred, true
+
 
 def save_model(model, scaler_X, scaler_y, params, overall_r2, save_dir, filename):
     """

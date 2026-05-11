@@ -37,6 +37,11 @@ def main():
     print("2. Seq2Seq LSTM (Encoder-Decoder + Attention)")
     print("=" * 60)
     choice = input("请输入模型编号 (1/2): ").strip()
+    
+    # 🎯 优化：增加早期拦截机制，防止误输入继续向后运行报错
+    if choice not in ['1', '2']:
+        print("输入无效的模型编号，程序已终止。")
+        return
 
     # ---------- 0. 加载 YAML 配置文件 ----------
     config_path = "config.yml"
@@ -66,12 +71,14 @@ def main():
         random_seed=cfg['random_seed']
     )
 
-    X_train, y_train = X_train.to(device), y_train.to(device)
-    X_val, y_val = X_val.to(device), y_val.to(device)
-    X_test, y_test = X_test.to(device), y_test.to(device)
+    # 🎯 核心修复：移除以下这三行，避免全量数据塞入 GPU 导致 OOM（显存爆炸）
+    # 此时 X_train 等 Tensor 全都在 CPU 内存中安全待命
+    # X_train, y_train = X_train.to(device), y_train.to(device)
+    # X_val, y_val = X_val.to(device), y_val.to(device)
+    # X_test, y_test = X_test.to(device), y_test.to(device)
 
     # ---------- 2. 参数网格搜索 ----------
-    best_overall_r2 = -float('inf') # 🎯 R2 越大越好，初始化为负无穷
+    best_overall_r2 = -float('inf') # R2 越大越好，初始化为负无穷
     best_model_info = None
 
     param_combinations = list(itertools.product(
@@ -106,11 +113,10 @@ def main():
                 num_layers=layers,
                 dropout=drop
             )
-        else:
-            raise ValueError("无效的模型选择")
 
         model = model.to(device)
 
+        # 🎯 修改：传入 device 参数，由 trainer 在内部按批次调度显存
         model, best_val_loss, train_losses, val_losses = train_model(
             model=model,
             train_data=(X_train, y_train),
@@ -118,17 +124,19 @@ def main():
             epochs=cfg['epochs'],
             lr=lr,
             patience=patience,
-            batch_size=batch_size, # 🎯 传入批处理大小
+            device=device,
+            batch_size=batch_size,
             loss_type=loss_type,
             grad_clip=cfg['grad_clip']
         )
 
-        # 🎯 评估模型，接住新加入的 R2 分数
+        # 🎯 修改：传入 device 参数，让 evaluate_model 安全推理
         overall_mape, overall_mse, overall_mae, overall_r2, pred, true = evaluate_model(
             model=model,
             X_test=X_test,
             y_test=y_test,
-            scaler_y=scaler_y
+            scaler_y=scaler_y,
+            device=device
         )
         
         print(f"测试集整体 R² (决定系数): {overall_r2:.4f} , MSE: {overall_mse:.6f} , MAE: {overall_mae:.6f} (辅助MAPE: {overall_mape:.2f}%)")
@@ -136,14 +144,14 @@ def main():
         model_name = "LSTM" if choice == '1' else "Seq2SeqLSTM"
         base_filename = f"{model_name}_h{hidden}_l{layers}_drop{drop}_lr{lr}_{loss_type}_r2_{overall_r2:.4f}"
 
-        # 🎯 核心修改点：根据 R2 分数进行筛选分类
-        if overall_r2 >= 0.70:
+        # 根据 R2 分数进行筛选分类
+        if overall_r2 >= 0.80:
             current_save_dir = os.path.join(cfg['result_root'], "accuracy_high")
-            print(f"✅ R² 分数 {overall_r2:.4f} >= 0.7，存入 accuracy_high/ 文件夹")
+            print(f"✅ R² 分数 {overall_r2:.4f} >= 0.8，存入 accuracy_high/ 文件夹")
         else:
             current_save_dir = os.path.join(cfg['result_root'], "other")
-            print(f"⚠️ R² 分数 {overall_r2:.4f} < 0.7，存入 other/ 文件夹")
-
+            print(f"⚠️ R² 分数 {overall_r2:.4f} < 0.8，存入 other/ 文件夹")
+    
         save_path = save_model(
             model=model,
             scaler_X=scaler_X,
@@ -166,7 +174,7 @@ def main():
         )
         plot_loss_curves(train_losses, val_losses, current_save_dir, base_filename)
 
-        # 🎯 核心修改点：记录并更新全局 R2 最高的模型
+        # 记录并更新全局 R2 最高的模型
         if overall_r2 > best_overall_r2:
             best_overall_r2 = overall_r2
             best_model_info = {

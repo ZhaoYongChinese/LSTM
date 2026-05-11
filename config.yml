@@ -9,19 +9,19 @@ result_root: "result"              # 结果保存根目录
 # 2. 模型结构参数 (为了网格搜索，部分参数设计为列表)
 input_size: 1                      # 输入特征维度
 output_feature_size: 1             # 输出特征维度 (主要用于 Seq2Seq 模型解耦)
-hidden_size: [16, 32, 64]          # 隐藏层大小列表
-num_layers: [2, 1, 3]                 # 网络层数列表
+hidden_size: [64, 128]          # 隐藏层大小列表
+num_layers: [3, 4]                 # 网络层数列表
 dropout: [0.3]                     # Dropout 比率列表
 use_layer_norm: True               # 仅对 Vanilla LSTM 有效
 
 # 3. 序列长度与数据切分
-seq_length: 15                     # 输入序列长度（历史时间步数）
+seq_length: 47                     # 输入序列长度（历史时间步数）
 output_size: 5                     # 输出序列长度（预测未来时间步数）
 test_size: 0.15                    # 测试集占比
 val_size: 0.15                     # 验证集占比
 
 # 4. 训练过程与优化器参数
-epochs: 300                        # 最大训练轮数
+epochs: 400                        # 最大训练轮数
 batch_size: 64                     # 🎯 新增：批处理大小 (推荐 32, 64 或 128)
 learning_rate: [0.0005]            # 学习率列表
 patience: [15]                     # 早停耐心值列表

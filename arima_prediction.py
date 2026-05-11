@@ -1,5 +1,5 @@
 """
-ARIMA 时序预测 - 滑动窗口多步预测版（和LSTM逻辑完全对齐）
+ARIMA 时序预测 - 滑动窗口多步预测版（修正测试集数据泄露漏洞）
 用法：python arima_prediction.py
 """
 import os
@@ -9,7 +9,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from statsmodels.tsa.statespace.sarimax import SARIMAX
-from statsmodels.tsa.stattools import adfuller
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 import joblib
 
@@ -19,12 +18,12 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 # ========== 配置参数（和LSTM完全对齐） ==========
-DATA_PATH = "data/normal/normal.csv"
+DATA_PATH = "data/1/新建文本文档.csv"
 TARGET_COL = "RMS_Value"
 
 # 和LSTM完全一致的序列长度
-SEQ_LENGTH = 72    # 历史输入长度
-OUTPUT_SIZE = 36    # 预测步长
+SEQ_LENGTH = 47     # 历史输入长度
+OUTPUT_SIZE = 5    # 预测步长
 TRAIN_RATIO = 0.7   # 训练集比例（用于预训练最优阶数，不参与滑动预测）
 
 # 阶数搜索范围
@@ -75,24 +74,35 @@ def determine_best_order(train_series, p_range, d_range, q_range):
     print(f"✅ 全局最优 ARIMA 阶数: {best_order}, 最小AIC: {best_aic:.2f}")
     return best_order
 
-def sliding_window_predict(series, seq_len, pred_len, best_order):
+def sliding_window_predict(series, seq_len, pred_len, best_order, train_ratio):
     """
-    滑动窗口多步预测（和LSTM完全一致的逻辑）
+    滑动窗口多步预测 - 🎯 修正版：严格仅在测试集上滑动
     输入：完整序列
     输出：所有窗口的真实值、预测值、整体指标
     """
     total_len = len(series)
+    
+    # 🎯 核心修正1：计算测试集真正的起点，确保模型预测的是未知数据
+    split_idx = int(total_len * train_ratio)
+    # 第一组预测应当从 split_idx 开始，所以其依赖的历史数据起点为 split_idx - seq_len
+    start_loop_idx = split_idx - seq_len
+    if start_loop_idx < 0:
+        start_loop_idx = 0
+        
     max_start_idx = total_len - seq_len - pred_len
     
-    if max_start_idx < 0:
-        raise ValueError(f"数据长度 {total_len} 不足，至少需要 {seq_len + pred_len} 个点")
+    if max_start_idx < start_loop_idx:
+        raise ValueError("测试集数据长度不足以进行哪怕一次滑动预测！请增加数据或缩小预测窗口。")
     
     all_true = []
     all_pred = []
     window_results = []
     
-    print(f"开始滑动窗口预测，总窗口数: {max_start_idx+1}")
-    for start_idx in range(max_start_idx + 1):
+    total_windows = max_start_idx - start_loop_idx + 1
+    print(f"开始测试集滑动窗口预测，总窗口数: {total_windows}")
+    
+    # 从训练集结束的地方开始往后滑动，彻底避免数据泄露
+    for start_idx in range(start_loop_idx, max_start_idx + 1):
         # 1. 截取当前窗口的历史数据和未来真实值
         hist_end = start_idx + seq_len
         hist_series = series[start_idx:hist_end]
@@ -111,7 +121,7 @@ def sliding_window_predict(series, seq_len, pred_len, best_order):
         except Exception as e:
             # 拟合失败时，用历史均值填充
             future_pred = np.full(pred_len, np.mean(hist_series))
-            print(f"窗口 {start_idx} 拟合失败，用均值填充")
+            print(f"警告：窗口 {start_idx} 拟合失败，用历史均值填充")
         
         # 3. 保存结果
         all_true.append(future_true)
@@ -128,8 +138,9 @@ def sliding_window_predict(series, seq_len, pred_len, best_order):
         })
         
         # 打印进度
-        if (start_idx + 1) % 20 == 0:
-            print(f"已完成 {start_idx+1}/{max_start_idx+1} 个窗口")
+        current_step = start_idx - start_loop_idx + 1
+        if current_step % 20 == 0 or current_step == total_windows:
+            print(f"已完成 {current_step}/{total_windows} 个窗口")
     
     # 计算整体指标
     overall_true = np.concatenate(all_true)
@@ -137,7 +148,7 @@ def sliding_window_predict(series, seq_len, pred_len, best_order):
     overall_mae, overall_rmse, overall_smape = evaluate(overall_true, overall_pred)
     
     print("\n==================== 整体预测结果 ====================")
-    print(f"总预测点数: {len(overall_true)}")
+    print(f"总预测点数 (纯测试集): {len(overall_true)}")
     print(f"整体 MAE: {overall_mae:.8f}")
     print(f"整体 RMSE: {overall_rmse:.8f}")
     print(f"整体 sMAPE: {overall_smape:.4f}%")
@@ -146,7 +157,8 @@ def sliding_window_predict(series, seq_len, pred_len, best_order):
     
     return window_results, overall_true, overall_pred, (overall_mae, overall_rmse, overall_smape)
 
-def create_prediction_plot(series, seq_len, pred_len, window_results, save_path="result/arima_sliding_prediction.png"):
+# 🎯 核心修正2：移除隐式 global，改为显式参数传入 best_order
+def create_prediction_plot(series, seq_len, pred_len, window_results, best_order, save_path="result/arima_sliding_prediction.png"):
     """绘制最后一个窗口的预测效果图"""
     last_window = window_results[-1]
     start_idx = last_window["start_idx"]
@@ -167,16 +179,24 @@ def create_prediction_plot(series, seq_len, pred_len, window_results, save_path=
     plt.ylabel('RMS Value')
     plt.grid(True, alpha=0.3)
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    plt.show()
+    plt.close() # 释放内存
     print(f"预测效果图已保存至: {save_path}")
 
-def create_animation_gif(series, seq_len, pred_len, window_results, save_path="result/arima_prediction_animation.gif", fps=1):
+# 🎯 核心修正3：显式传入参数并动态计算Y轴上下限
+def create_animation_gif(series, seq_len, pred_len, window_results, best_order, overall_smape, save_path="result/arima_prediction_animation.gif", fps=1):
     """生成和LSTM完全一致的滑动预测动图"""
-    total_len = len(series)
-    max_start_idx = len(window_results) - 1
     
     fig, ax = plt.subplots(figsize=(12, 6))
     plt.subplots_adjust(top=0.85)
+
+    # 🎯 动态计算Y轴范围（仅提取测试集及测试窗口历史数据的区间，防止整体极值干扰）
+    first_window_start = window_results[0]["start_idx"]
+    eval_series = series[first_window_start:]
+    y_min, y_max = np.min(eval_series), np.max(eval_series)
+    # 增加10%的上下余量让曲线不至于顶格
+    y_padding = (y_max - y_min) * 0.1 if (y_max - y_min) > 0 else 0.1
+    y_lim_bottom = y_min - y_padding
+    y_lim_top = y_max + y_padding
 
     def animate(i):
         ax.clear()
@@ -191,7 +211,6 @@ def create_animation_gif(series, seq_len, pred_len, window_results, save_path="r
         pred = window["pred"]
         
         # 坐标
-        x_hist = np.arange(start_idx, hist_end)
         x_future = np.arange(hist_end, hist_end + pred_len)
         x_all = np.arange(start_idx, hist_end + pred_len)
         
@@ -200,12 +219,13 @@ def create_animation_gif(series, seq_len, pred_len, window_results, save_path="r
         ax.plot(x_future, pred, 'r--', label='Predicted', linewidth=2)
         ax.axvline(x=hist_end - 1, color='gray', linestyle=':', alpha=0.7)
         
-        # 美化
-        ax.set_ylim(0.03, 0.07)  # 根据数据范围调整
+        # 🎯 应用动态计算好的Y轴范围
+        ax.set_ylim(y_lim_bottom, y_lim_top)  
+        
         ax.legend(loc='upper left')
         ax.set_xlabel('Time Step (index)')
         ax.set_ylabel('RMS Value')
-        # ax.set_title(f'ARIMA{best_order} Sliding Window | Window {i+1}/{max_start_idx+1} (Start = {start_idx})')
+        ax.set_title(f'ARIMA{best_order} Sliding Window | Start = {start_idx}')
         ax.grid(True, alpha=0.3)
         
         # 指标显示
@@ -225,6 +245,7 @@ def create_animation_gif(series, seq_len, pred_len, window_results, save_path="r
                                   interval=1000//fps, repeat=False)
     writer = animation.PillowWriter(fps=fps)
     ani.save(save_path, writer=writer, dpi=80)
+    plt.close()
     print(f"动图已保存至: {save_path}")
 
 def main():
@@ -237,13 +258,13 @@ def main():
     train_series = series[:split_idx]
     print(f"训练集长度: {len(train_series)}，用于搜索最优ARIMA阶数")
     
-    global best_order
+    # 移除 global 变量，正常通过返回值接收
     best_order = determine_best_order(train_series, P_VALUES, D_VALUES, Q_VALUES)
     
     # 3. 滑动窗口多步预测（和LSTM完全一致）
-    global overall_smape
+    # 传入 TRAIN_RATIO 从而确保预测区间只落在剩下的 30% 测试集里
     window_results, overall_true, overall_pred, metrics = sliding_window_predict(
-        series, SEQ_LENGTH, OUTPUT_SIZE, best_order
+        series, SEQ_LENGTH, OUTPUT_SIZE, best_order, TRAIN_RATIO
     )
     overall_mae, overall_rmse, overall_smape = metrics
     
@@ -263,11 +284,11 @@ def main():
     joblib.dump(result_dict, "result/arima_sliding_results.pkl")
     print(f"预测结果已保存至: result/arima_sliding_results.pkl")
     
-    # 5. 绘制效果图
-    create_prediction_plot(series, SEQ_LENGTH, OUTPUT_SIZE, window_results)
+    # 5. 绘制效果图 (显式传入 best_order)
+    create_prediction_plot(series, SEQ_LENGTH, OUTPUT_SIZE, window_results, best_order)
     
-    # 6. 生成动图（可选，耗时较长，可注释）
-    create_animation_gif(series, SEQ_LENGTH, OUTPUT_SIZE, window_results)
+    # 6. 生成动图 (显式传入 best_order, overall_smape)
+    create_animation_gif(series, SEQ_LENGTH, OUTPUT_SIZE, window_results, best_order, overall_smape)
 
 if __name__ == "__main__":
     main()
