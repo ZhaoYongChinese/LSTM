@@ -145,12 +145,12 @@ def main():
         base_filename = f"{model_name}_h{hidden}_l{layers}_drop{drop}_lr{lr}_{loss_type}_r2_{overall_r2:.4f}"
 
         # 根据 R2 分数进行筛选分类
-        if overall_r2 >= 0.80:
+        if overall_r2 >= 0.80 and overall_mape <= 5:  # 设定双重筛选条件，确保模型不仅 R2 高，还要 MAPE 低
             current_save_dir = os.path.join(cfg['result_root'], "accuracy_high")
-            print(f"✅ R² 分数 {overall_r2:.4f} >= 0.8，存入 accuracy_high/ 文件夹")
+            print(f"✅ R² 分数 {overall_r2:.4f} >= 0.80 且 MAPE {overall_mape:.2f}% <= 5%，存入 accuracy_high/ 文件夹")
         else:
             current_save_dir = os.path.join(cfg['result_root'], "other")
-            print(f"⚠️ R² 分数 {overall_r2:.4f} < 0.8，存入 other/ 文件夹")
+            print(f"⚠️ R² 分数 {overall_r2:.4f} < 0.80 或 MAPE {overall_mape:.2f}% > 5%，存入 other/ 文件夹")
     
         save_path = save_model(
             model=model,
