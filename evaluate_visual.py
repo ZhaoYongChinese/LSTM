@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import tkinter as tk
 from tkinter import filedialog
 
-from models.LSTM.model import Seq2SeqLSTM
+from models.LSTM.model import LSTMMultiStep, Seq2SeqLSTM  # 🆕 支持两种模型
 from utils.data_loader import load_multiple_csv
 from utils.trainer import evaluate_model
 
@@ -34,43 +34,71 @@ def main():
     # 1. 加载配置
     with open("config.yml", "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
-    
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("="*50)
     print("启动模型可视化评估模块...")
+
+    # 🆕 读取新配置
+    use_time_features = cfg.get('use_time_features', False)
+    input_size = 1 + (2 if use_time_features else 0)
 
     # 2. 找到最好的模型 (优先从 first 文件夹找)
     best_dir = os.path.join(cfg['result_root'], "first")
     if not os.path.exists(best_dir) or len(os.listdir(best_dir)) == 0:
         print("未在 first 目录找到最佳模型，请确认是否已成功训练。")
         return
-    
+
     pth_file = [f for f in os.listdir(best_dir) if f.endswith('.pth')][0]
     model_path = os.path.join(best_dir, pth_file)
     print(f"加载最佳模型权重: {pth_file}")
 
     # 3. 加载 Checkpoint
-    # 🎯 这里已经包含了上一轮修复的 weights_only=False
     checkpoint = torch.load(model_path, map_location=device, weights_only=False)
     params = checkpoint['params']
     scaler_y = checkpoint['scaler_y']
 
+    # 🆕 从 checkpoint 读取新参数（兼容旧模型，默认值关）
+    ckpt_input_size = params.get('input_size', input_size)
+    ckpt_use_residual = params.get('use_residual', False)
+    ckpt_use_time_features = params.get('use_time_features', False)
+    ckpt_model_type = params.get('model_type', 'Seq2SeqLSTM')
+    print(f"🆕 模型参数: input_size={ckpt_input_size}, residual={ckpt_use_residual}, time_feat={ckpt_use_time_features}, type={ckpt_model_type}")
+
     # 4. 加载数据 (只需测试集)
     # 🎯 核心修复：引入智能弹窗，再也不会因为空路径崩溃了
     DATA_DIR = get_data_dir_via_gui(cfg.get("data_dir", ""))
-    
+
     _, _, _, _, X_test, y_test, _, _ = load_multiple_csv(
         data_dir=DATA_DIR, target_col=cfg['target_column'], seq_len=cfg['seq_length'],
-        pred_len=cfg['output_size'], test_size=cfg['test_size'], val_size=cfg['val_size'], random_seed=cfg['random_seed']
+        pred_len=cfg['output_size'], test_size=cfg['test_size'], val_size=cfg['val_size'],
+        random_seed=cfg['random_seed'],
+        use_time_features=ckpt_use_time_features,  # 🆕 与训练时一致
+        period=cfg['output_size']
     )
     X_test, y_test = X_test.to(device), y_test.to(device)
 
     # 5. 初始化模型架构并注入权重
-    model = Seq2SeqLSTM(
-        input_size=cfg['input_size'], hidden_size=params['hidden_size'],
-        output_size=cfg['output_size'], output_feature_size=cfg['output_feature_size'],
-        num_layers=params['num_layers'], dropout=0  # 推理时不需要 dropout
-    ).to(device)
+    if ckpt_model_type == 'LSTM' or ckpt_model_type == 'LSTMMultiStep':
+        model = LSTMMultiStep(
+            input_size=ckpt_input_size,
+            hidden_size=params['hidden_size'],
+            output_size=params['output_size'],
+            num_layers=params['num_layers'],
+            dropout=0,
+            use_layer_norm=cfg.get('use_layer_norm', False),
+            use_residual=ckpt_use_residual           # 🆕
+        ).to(device)
+    else:
+        model = Seq2SeqLSTM(
+            input_size=ckpt_input_size,
+            hidden_size=params['hidden_size'],
+            output_size=params['output_size'],
+            output_feature_size=cfg['output_feature_size'],
+            num_layers=params['num_layers'],
+            dropout=0,
+            use_residual=ckpt_use_residual            # 🆕
+        ).to(device)
     model.load_state_dict(checkpoint['model_state_dict'])
 
     # 6. 执行预测

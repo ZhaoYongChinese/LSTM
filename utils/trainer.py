@@ -122,8 +122,15 @@ def evaluate_model(model, X_test, y_test, scaler_y, device):
         pred_norm = model(X_test)
         
         # 统一转回 cpu numpy 进行反归一化和评价指标计算
-        pred = scaler_y.inverse_transform(pred_norm.cpu().numpy())
-        true = scaler_y.inverse_transform(y_test.cpu().numpy())
+        # 🆕 兼容统一scaler (1特征) 和旧版scaler (47特征)
+        pred_np = pred_norm.cpu().numpy()
+        true_np = y_test.cpu().numpy()
+        if hasattr(scaler_y, 'n_features_in_') and scaler_y.n_features_in_ == 1:
+            pred = scaler_y.inverse_transform(pred_np.reshape(-1, 1)).reshape(pred_np.shape)
+            true = scaler_y.inverse_transform(true_np.reshape(-1, 1)).reshape(true_np.shape)
+        else:
+            pred = scaler_y.inverse_transform(pred_np)
+            true = scaler_y.inverse_transform(true_np)
 
     # 🎯 调用本地 metrics.py 的 compute_r2
     overall_r2 = compute_r2(true, pred)

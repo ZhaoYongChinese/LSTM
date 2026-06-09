@@ -7,12 +7,14 @@ data_dir: ""                       # 数据文件夹路径 (留空或路径无�
 result_root: "result"              # 结果保存根目录
 
 # 2. 模型结构参数 (为了网格搜索，部分参数设计为列表)
-input_size: 1                      # 输入特征维度
+input_size: 1                      # 输入特征维度 (use_time_features=True 时自动变为 3)
 output_feature_size: 1             # 输出特征维度 (主要用于 Seq2Seq 模型解耦)
 hidden_size: [64, 128, 256]          # 隐藏层大小列表
 num_layers: [3, 4]                 # 网络层数列表
 dropout: [0.3, 0.15]                     # Dropout 比率列表
 use_layer_norm: True               # 仅对 Vanilla LSTM 有效
+use_time_features: True            # 🆕 是否加入 sin/cos 时间编码 (一天中的第几个半小时)
+use_residual: True                 # 🆕 是否启用残差预测 (预测明天与今天的差值)
 
 # 3. 序列长度与数据切分
 seq_length: 658                     # 输入序列长度（历史时间步数）

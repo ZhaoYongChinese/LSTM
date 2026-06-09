@@ -51,12 +51,19 @@ def main():
     with open(config_path, "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
 
+    # 🆕 读取新配置项（带默认值，兼容旧配置文件）
+    use_time_features = cfg.get('use_time_features', False)
+    use_residual = cfg.get('use_residual', False)
+    # 🆕 自动计算 input_size: RMS通道(1) + sin/cos时间特征(2)
+    input_size = 1 + (2 if use_time_features else 0)
+
     DATA_DIR = get_data_dir_via_gui(cfg.get("data_dir", ""))
 
     torch.manual_seed(cfg['random_seed'])
     np.random.seed(cfg['random_seed'])
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"使用设备: {device}")
+    print(f"🆕 时间特征: {'启用' if use_time_features else '关闭'} | 残差预测: {'启用' if use_residual else '关闭'} | input_size={input_size}")
 
     # ---------- 1. 加载数据 ----------
     print("\n正在从文件夹加载多个CSV文件...")
@@ -68,7 +75,9 @@ def main():
         pred_len=cfg['output_size'],
         test_size=cfg['test_size'],
         val_size=cfg['val_size'],
-        random_seed=cfg['random_seed']
+        random_seed=cfg['random_seed'],
+        use_time_features=use_time_features,  # 🆕
+        period=cfg['output_size']              # 🆕 周期=预测步数=47
     )
 
     # 🎯 核心修复：移除以下这三行，避免全量数据塞入 GPU 导致 OOM（显存爆炸）
@@ -97,21 +106,23 @@ def main():
 
         if choice == '1':
             model = LSTMMultiStep(
-                input_size=cfg['input_size'],
+                input_size=input_size,         # 🆕 自动计算 (1 + 时间特征)
                 hidden_size=hidden,
                 output_size=cfg['output_size'],
                 num_layers=layers,
                 dropout=drop,
-                use_layer_norm=cfg['use_layer_norm']
+                use_layer_norm=cfg['use_layer_norm'],
+                use_residual=use_residual       # 🆕 残差跳跃连接
             )
         elif choice == '2':
             model = Seq2SeqLSTM(
-                input_size=cfg['input_size'],
+                input_size=input_size,         # 🆕 自动计算
                 hidden_size=hidden,
                 output_size=cfg['output_size'],
-                output_feature_size=cfg['output_feature_size'], 
+                output_feature_size=cfg['output_feature_size'],
                 num_layers=layers,
-                dropout=drop
+                dropout=drop,
+                use_residual=use_residual       # 🆕 残差跳跃连接
             )
 
         model = model.to(device)
@@ -166,7 +177,10 @@ def main():
                 'seq_len': cfg['seq_length'],
                 'output_size': cfg['output_size'],
                 'loss_type': loss_type,
-                'r2_score': overall_r2 # 记录新指标
+                'r2_score': overall_r2,
+                'input_size': input_size,              # 🆕
+                'use_residual': use_residual,          # 🆕
+                'use_time_features': use_time_features, # 🆕
             },
             overall_r2=overall_r2,
             save_dir=current_save_dir,

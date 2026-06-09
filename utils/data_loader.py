@@ -6,10 +6,15 @@ from sklearn.preprocessing import StandardScaler
 
 
 def load_multiple_csv(data_dir, target_col, seq_len, pred_len,
-                      test_size=0.15, val_size=0.15, random_seed=42):
+                      test_size=0.15, val_size=0.15, random_seed=42,
+                      use_time_features=True, period=47):
     """
     从文件夹读取多个CSV文件，构造训练/验证/测试集。
     支持动态滑窗步长，绝不跨文件采样。
+
+    🆕 v2 改动:
+      - use_time_features: 在输入中加入 sin/cos 日内时间编码
+      - 统一 scaler: X 和 y 使用同一个 StandardScaler，保证残差加法在归一化空间合法
 
     参数:
         data_dir: 存放CSV文件的文件夹路径
@@ -19,13 +24,17 @@ def load_multiple_csv(data_dir, target_col, seq_len, pred_len,
         test_size: 测试集比例
         val_size: 验证集比例（相对于训练+验证部分）
         random_seed: 随机种子（保留，但划分时不打乱顺序）
+        use_time_features: 是否在输入中加入 sin/cos 编码
+        period: 每日周期步数（默认 47）
 
     返回:
         X_train_tensor, y_train_tensor, X_val_tensor, y_val_tensor,
         X_test_tensor, y_test_tensor, scaler_X, scaler_y
+        (scaler_X 和 scaler_y 是同一个对象——统一归一化)
     """
     min_req_len = seq_len + pred_len
     all_X, all_y = [], []
+    num_channels = 1 + (2 if use_time_features else 0)  # RMS + (sin, cos)
 
     csv_files = [f for f in os.listdir(data_dir) if f.endswith('.csv')]
     if not csv_files:
@@ -62,20 +71,30 @@ def load_multiple_csv(data_dir, target_col, seq_len, pred_len,
 
         X_file, y_file = [], []
         for i in range(0, max_samples, stride):
-            x = series[i : i + seq_len]
-            y = series[i + seq_len : i + min_req_len]
+            x_rms = series[i : i + seq_len]           # [seq_len]
+            y = series[i + seq_len : i + min_req_len]  # [pred_len]
+
+            if use_time_features:
+                # 🆕 日内时间编码: 每个时间步是当天的第几个半小时 (周期=47)
+                positions = np.arange(i, i + seq_len) % period
+                sin_feat = np.sin(2 * np.pi * positions / period).astype(np.float32)
+                cos_feat = np.cos(2 * np.pi * positions / period).astype(np.float32)
+                x = np.stack([x_rms, sin_feat, cos_feat], axis=1)  # [seq_len, 3]
+            else:
+                x = x_rms.reshape(-1, 1)  # [seq_len, 1]
+
             X_file.append(x)
             y_file.append(y)
 
         if X_file:
-            all_X.append(np.array(X_file))
-            all_y.append(np.array(y_file))
+            all_X.append(np.array(X_file))  # [n_samples, seq_len, channels]
+            all_y.append(np.array(y_file))  # [n_samples, pred_len]
 
     if not all_X:
         raise ValueError("没有有效数据，请检查文件长度或目标列名")
 
-    X_all = np.concatenate(all_X, axis=0).reshape(-1, seq_len, 1)
-    y_all = np.concatenate(all_y, axis=0)  # shape: (total_samples, pred_len)
+    X_all = np.concatenate(all_X, axis=0)  # [total, seq_len, channels]
+    y_all = np.concatenate(all_y, axis=0)  # [total, pred_len]
 
     print(f"总样本数: {X_all.shape[0]}, 输入形状: {X_all.shape}, 输出形状: {y_all.shape}")
 
@@ -94,31 +113,57 @@ def load_multiple_csv(data_dir, target_col, seq_len, pred_len,
 
     print(f"划分后 - 训练: {n_train}, 验证: {n_val}, 测试: {n_test}")
 
-    # 归一化
-    scaler_X = StandardScaler()
-    scaler_y = StandardScaler()
+    # ─── 🆕 统一归一化: X 和 y 共用同一个 Scaler ───
+    # 拆分 RMS 通道 (channel 0) 和时间特征 (channel 1:, 如 sin/cos)
+    if use_time_features:
+        X_train_rms = X_train[:, :, 0:1]   # [n, seq_len, 1]
+        X_train_time = X_train[:, :, 1:]    # [n, seq_len, 2], 时间特征在 [-1,1] 无需归一化
+        X_val_rms   = X_val[:, :, 0:1]
+        X_val_time  = X_val[:, :, 1:]
+        X_test_rms  = X_test[:, :, 0:1]
+        X_test_time = X_test[:, :, 1:]
+    else:
+        X_train_rms = X_train
+        X_val_rms   = X_val
+        X_test_rms  = X_test
 
-    X_train_2d = X_train.reshape(-1, 1)
-    X_val_2d = X_val.reshape(-1, 1)
-    X_test_2d = X_test.reshape(-1, 1)
+    # 在训练集上拟合统一 scaler（同时覆盖 X 和 y 的 RMS 值，保证分布一致）
+    scaler = StandardScaler()
+    all_train_rms = np.concatenate([
+        X_train_rms.flatten(),
+        y_train.flatten()
+    ]).reshape(-1, 1)
+    scaler.fit(all_train_rms)
 
-    X_train_norm = scaler_X.fit_transform(X_train_2d).reshape(X_train.shape)
-    X_val_norm = scaler_X.transform(X_val_2d).reshape(X_val.shape)
-    X_test_norm = scaler_X.transform(X_test_2d).reshape(X_test.shape)
+    # 分别对 X 的 RMS 通道和 y 做变换
+    X_train_rms_norm = scaler.transform(X_train_rms.reshape(-1, 1)).reshape(X_train_rms.shape)
+    X_val_rms_norm   = scaler.transform(X_val_rms.reshape(-1, 1)).reshape(X_val_rms.shape)
+    X_test_rms_norm  = scaler.transform(X_test_rms.reshape(-1, 1)).reshape(X_test_rms.shape)
 
-    y_train_norm = scaler_y.fit_transform(y_train)
-    y_val_norm = scaler_y.transform(y_val)
-    y_test_norm = scaler_y.transform(y_test)
+    y_train_norm = scaler.transform(y_train.reshape(-1, 1)).reshape(y_train.shape)
+    y_val_norm   = scaler.transform(y_val.reshape(-1, 1)).reshape(y_val.shape)
+    y_test_norm  = scaler.transform(y_test.reshape(-1, 1)).reshape(y_test.shape)
+
+    # 拼回时间特征（时间特征始终在 [-1,1]，无需归一化）
+    if use_time_features:
+        X_train_norm = np.concatenate([X_train_rms_norm, X_train_time], axis=2)
+        X_val_norm   = np.concatenate([X_val_rms_norm,   X_val_time],   axis=2)
+        X_test_norm  = np.concatenate([X_test_rms_norm,  X_test_time],  axis=2)
+    else:
+        X_train_norm = X_train_rms_norm
+        X_val_norm   = X_val_rms_norm
+        X_test_norm  = X_test_rms_norm
 
     # 转为Tensor
     X_train_tensor = torch.FloatTensor(X_train_norm)
     y_train_tensor = torch.FloatTensor(y_train_norm)
-    X_val_tensor = torch.FloatTensor(X_val_norm)
-    y_val_tensor = torch.FloatTensor(y_val_norm)
-    X_test_tensor = torch.FloatTensor(X_test_norm)
-    y_test_tensor = torch.FloatTensor(y_test_norm)
+    X_val_tensor   = torch.FloatTensor(X_val_norm)
+    y_val_tensor   = torch.FloatTensor(y_val_norm)
+    X_test_tensor  = torch.FloatTensor(X_test_norm)
+    y_test_tensor  = torch.FloatTensor(y_test_norm)
 
+    # 🆕 返回同一个 scaler（作为 scaler_X 和 scaler_y），保持外部接口兼容
     return (X_train_tensor, y_train_tensor,
             X_val_tensor, y_val_tensor,
             X_test_tensor, y_test_tensor,
-            scaler_X, scaler_y)
+            scaler, scaler)
