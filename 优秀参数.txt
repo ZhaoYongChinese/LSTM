@@ -1,16 +1,58 @@
-5.36——0.9672
-4层64个隐藏单元hubber
-5.85——0.9648
-4层128个阴藏单元hubber
-5.29——0.9625
-4层128个阴藏单元mse
-5.72——0.9639
-4层256个阴藏单元mse
+==================================================
+进度: 3/24
+参数: hidden=64, layers=3, dropout=0.15, lr=0.0005, patience=15, loss_type=huber
+Epoch   1/400 | Train Loss: 0.494440 | Val Loss: 0.518181 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.124421 | Val Loss: 0.099854 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.037355 | Val Loss: 0.034642 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.034743 | Val Loss: 0.029608 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.027658 | Val Loss: 0.032118 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.022900 | Val Loss: 0.020199 | LR: 0.000405
+Epoch  60/400 | Train Loss: 0.022803 | Val Loss: 0.021669 | LR: 0.000365
+Epoch  70/400 | Train Loss: 0.025570 | Val Loss: 0.027876 | LR: 0.000365
+Epoch  80/400 | Train Loss: 0.021463 | Val Loss: 0.022112 | LR: 0.000328
+Epoch  90/400 | Train Loss: 0.020743 | Val Loss: 0.019138 | LR: 0.000328
+Epoch 100/400 | Train Loss: 0.020902 | Val Loss: 0.019463 | LR: 0.000295
+Epoch 110/400 | Train Loss: 0.020005 | Val Loss: 0.016223 | LR: 0.000295
+早停触发于 epoch 117
+测试集整体 R² (决定系数): 0.9831 , MSE: 0.000000 , MAE: 0.000238 (辅助MAPE: 11.35%)
+⚠️ R² 分数 0.9831 < 0.80 或 MAPE 11.35% > 10%，存入 other/ 文件夹
+模型已保存: result\other\Seq2SeqLSTM_h64_l3_drop0.15_lr0.0005_huber_r2_0.9831.pth
+Loss 曲线已保存: result\other\Seq2SeqLSTM_h64_l3_drop0.15_lr0.0005_huber_r2_0.9831_loss.png
 
-少3天
-9.96——0.9504
-4层64个隐藏单元hubber
+==================================================
+进度: 4/24
+参数: hidden=64, layers=3, dropout=0.15, lr=0.0005, patience=15, loss_type=mse
+Epoch   1/400 | Train Loss: 0.996817 | Val Loss: 1.049546 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.226889 | Val Loss: 0.283465 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.066202 | Val Loss: 0.051783 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.061686 | Val Loss: 0.049940 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.050235 | Val Loss: 0.049897 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.045361 | Val Loss: 0.045901 | LR: 0.000405
+Epoch  60/400 | Train Loss: 0.048602 | Val Loss: 0.071883 | LR: 0.000365
+Epoch  70/400 | Train Loss: 0.041724 | Val Loss: 0.039187 | LR: 0.000365
+Epoch  80/400 | Train Loss: 0.079352 | Val Loss: 0.074456 | LR: 0.000328
+早停触发于 epoch 86
+测试集整体 R² (决定系数): 0.9817 , MSE: 0.000000 , MAE: 0.000255 (辅助MAPE: 11.10%)
+⚠️ R² 分数 0.9817 < 0.80 或 MAPE 11.10% > 10%，存入 other/ 文件夹
+模型已保存: result\other\Seq2SeqLSTM_h64_l3_drop0.15_lr0.0005_mse_r2_0.9817.pth
+Loss 曲线已保存: result\other\Seq2SeqLSTM_h64_l3_drop0.15_lr0.0005_mse_r2_0.9817_loss.png
 
-少6天
-11.35——0.9267
-3层128个隐藏单元hubber
+==================================================
+进度: 13/24
+参数: hidden=128, layers=4, dropout=0.3, lr=0.0005, patience=15, loss_type=huber
+Epoch   1/400 | Train Loss: 0.494067 | Val Loss: 0.518654 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.095504 | Val Loss: 0.126702 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.039475 | Val Loss: 0.046629 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.027077 | Val Loss: 0.018206 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.026359 | Val Loss: 0.020300 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.021658 | Val Loss: 0.016431 | LR: 0.000405
+Epoch  60/400 | Train Loss: 0.023801 | Val Loss: 0.015955 | LR: 0.000365
+Epoch  70/400 | Train Loss: 0.021088 | Val Loss: 0.023396 | LR: 0.000365
+Epoch  80/400 | Train Loss: 0.022601 | Val Loss: 0.018466 | LR: 0.000328
+早停触发于 epoch 84
+测试集整体 R² (决定系数): 0.9829 , MSE: 0.000000 , MAE: 0.000234 (辅助MAPE: 10.76%)
+⚠️ R² 分数 0.9829 < 0.80 或 MAPE 10.76% > 10%，存入 other/ 文件夹
+模型已保存: result\other\Seq2SeqLSTM_h128_l4_drop0.3_lr0.0005_huber_r2_0.9829.pth
+Loss 曲线已保存: result\other\Seq2SeqLSTM_h128_l4_drop0.3_lr0.0005_huber_r2_0.9829_loss.png
+
+==================================================
