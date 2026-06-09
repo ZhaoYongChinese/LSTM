@@ -3,16 +3,17 @@
 1. Vanilla LSTM (直接多步输出)
 2. Seq2Seq LSTM (Encoder-Decoder + Attention)
 ============================================================
-请输入模型编号 (1/2): 2
+请输入模型编号 (1/2): 1
 
 [系统提示] 数据目录未配置或路径不存在，请在弹出的窗口中选择包含CSV数据的文件夹...
 [系统提示] 成功选择数据路径: C:/Users/Admin/Desktop/最高优先/LSTM/data/杭州市医院
 使用设备: cuda
+🆕 时间特征: 启用 | 残差预测: 启用 | input_size=3
 
 正在从文件夹加载多个CSV文件...
 找到 1 个CSV文件
 文件 42天杭州市医院扶梯rms值记录.csv 长度 1974, 最大样本数 1270, 采用 stride=2
-总样本数: 635, 输入形状: (635, 658, 1), 输出形状: (635, 47)
+总样本数: 635, 输入形状: (635, 658, 3), 输出形状: (635, 47)
 划分后 - 训练: 459, 验证: 81, 测试: 95
 
 共有 24 组参数组合待训练
@@ -20,383 +21,706 @@
 ==================================================
 进度: 1/24
 参数: hidden=64, layers=3, dropout=0.3, lr=0.0005, patience=15, loss_type=huber
-Epoch   1/400 | Train Loss: 0.493631 | Val Loss: 0.518016 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.142007 | Val Loss: 0.140818 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.036002 | Val Loss: 0.044979 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.029737 | Val Loss: 0.025197 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.025332 | Val Loss: 0.016729 | LR: 0.000405
-Epoch  50/400 | Train Loss: 0.028640 | Val Loss: 0.020637 | LR: 0.000405
-早停触发于 epoch 55
-测试集整体 R² (决定系数): 0.9737 , MSE: 0.000001 , MAE: 0.000298 (辅助MAPE: 14.84%)
-⚠️ R² 分数 0.9737 < 0.80 或 MAPE 14.84% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h64_l3_drop0.3_lr0.0005_huber_r2_0.9737.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h64_l3_drop0.3_lr0.0005_huber_r2_0.9737_loss.png
+Epoch   1/400 | Train Loss: 0.180956 | Val Loss: 0.057254 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.062909 | Val Loss: 0.022622 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.035123 | Val Loss: 0.022438 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.026711 | Val Loss: 0.022399 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.024903 | Val Loss: 0.022357 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.024425 | Val Loss: 0.022347 | LR: 0.000405
+Epoch  60/400 | Train Loss: 0.024122 | Val Loss: 0.022337 | LR: 0.000365
+Epoch  70/400 | Train Loss: 0.023946 | Val Loss: 0.022319 | LR: 0.000365
+Epoch  80/400 | Train Loss: 0.023733 | Val Loss: 0.022333 | LR: 0.000328
+早停触发于 epoch 88
+测试集整体 R² (决定系数): 0.9962 , MSE: 0.000000 , MAE: 0.000081 (辅助MAPE: 2.86%)
+✅ R² 分数 0.9962 >= 0.80 且 MAPE 2.86% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h64_l3_drop0.3_lr0.0005_huber_r2_0.9962.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h64_l3_drop0.3_lr0.0005_huber_r2_0.9962_loss.png
 
 ==================================================
 进度: 2/24
 参数: hidden=64, layers=3, dropout=0.3, lr=0.0005, patience=15, loss_type=mse
-Epoch   1/400 | Train Loss: 0.999957 | Val Loss: 1.048976 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.201379 | Val Loss: 0.239298 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.088956 | Val Loss: 0.083926 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.065724 | Val Loss: 0.048752 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.062666 | Val Loss: 0.056791 | LR: 0.000405
-早停触发于 epoch 49
-测试集整体 R² (决定系数): 0.9709 , MSE: 0.000001 , MAE: 0.000316 (辅助MAPE: 15.45%)
-⚠️ R² 分数 0.9709 < 0.80 或 MAPE 15.45% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h64_l3_drop0.3_lr0.0005_mse_r2_0.9709.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h64_l3_drop0.3_lr0.0005_mse_r2_0.9709_loss.png
+Epoch   1/400 | Train Loss: 0.345273 | Val Loss: 0.100673 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.134462 | Val Loss: 0.056227 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.074164 | Val Loss: 0.055645 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.059782 | Val Loss: 0.055673 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.056573 | Val Loss: 0.055703 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.055155 | Val Loss: 0.055587 | LR: 0.000405
+早停触发于 epoch 51
+测试集整体 R² (决定系数): 0.9962 , MSE: 0.000000 , MAE: 0.000087 (辅助MAPE: 3.36%)
+✅ R² 分数 0.9962 >= 0.80 且 MAPE 3.36% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h64_l3_drop0.3_lr0.0005_mse_r2_0.9962.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h64_l3_drop0.3_lr0.0005_mse_r2_0.9962_loss.png
 
 ==================================================
 进度: 3/24
 参数: hidden=64, layers=3, dropout=0.15, lr=0.0005, patience=15, loss_type=huber
-Epoch   1/400 | Train Loss: 0.494440 | Val Loss: 0.518181 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.124421 | Val Loss: 0.099854 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.037355 | Val Loss: 0.034642 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.034743 | Val Loss: 0.029608 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.027658 | Val Loss: 0.032118 | LR: 0.000405
-Epoch  50/400 | Train Loss: 0.022900 | Val Loss: 0.020199 | LR: 0.000405
-Epoch  60/400 | Train Loss: 0.022803 | Val Loss: 0.021669 | LR: 0.000365
-Epoch  70/400 | Train Loss: 0.025570 | Val Loss: 0.027876 | LR: 0.000365
-Epoch  80/400 | Train Loss: 0.021463 | Val Loss: 0.022112 | LR: 0.000328
-Epoch  90/400 | Train Loss: 0.020743 | Val Loss: 0.019138 | LR: 0.000328
-Epoch 100/400 | Train Loss: 0.020902 | Val Loss: 0.019463 | LR: 0.000295
-Epoch 110/400 | Train Loss: 0.020005 | Val Loss: 0.016223 | LR: 0.000295
-早停触发于 epoch 117
-测试集整体 R² (决定系数): 0.9831 , MSE: 0.000000 , MAE: 0.000238 (辅助MAPE: 11.35%)
-⚠️ R² 分数 0.9831 < 0.80 或 MAPE 11.35% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h64_l3_drop0.15_lr0.0005_huber_r2_0.9831.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h64_l3_drop0.15_lr0.0005_huber_r2_0.9831_loss.png
+Epoch   1/400 | Train Loss: 0.150320 | Val Loss: 0.050923 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.045552 | Val Loss: 0.022461 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.036850 | Val Loss: 0.022383 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.028843 | Val Loss: 0.022342 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.024833 | Val Loss: 0.022335 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.023986 | Val Loss: 0.022318 | LR: 0.000405
+Epoch  60/400 | Train Loss: 0.023792 | Val Loss: 0.022299 | LR: 0.000365
+Epoch  70/400 | Train Loss: 0.023585 | Val Loss: 0.022299 | LR: 0.000365
+早停触发于 epoch 74
+测试集整体 R² (决定系数): 0.9962 , MSE: 0.000000 , MAE: 0.000084 (辅助MAPE: 3.13%)
+✅ R² 分数 0.9962 >= 0.80 且 MAPE 3.13% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h64_l3_drop0.15_lr0.0005_huber_r2_0.9962.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h64_l3_drop0.15_lr0.0005_huber_r2_0.9962_loss.png
 
 ==================================================
 进度: 4/24
 参数: hidden=64, layers=3, dropout=0.15, lr=0.0005, patience=15, loss_type=mse
-Epoch   1/400 | Train Loss: 0.996817 | Val Loss: 1.049546 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.226889 | Val Loss: 0.283465 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.066202 | Val Loss: 0.051783 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.061686 | Val Loss: 0.049940 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.050235 | Val Loss: 0.049897 | LR: 0.000405
-Epoch  50/400 | Train Loss: 0.045361 | Val Loss: 0.045901 | LR: 0.000405
-Epoch  60/400 | Train Loss: 0.048602 | Val Loss: 0.071883 | LR: 0.000365
-Epoch  70/400 | Train Loss: 0.041724 | Val Loss: 0.039187 | LR: 0.000365
-Epoch  80/400 | Train Loss: 0.079352 | Val Loss: 0.074456 | LR: 0.000328
-早停触发于 epoch 86
-测试集整体 R² (决定系数): 0.9817 , MSE: 0.000000 , MAE: 0.000255 (辅助MAPE: 11.10%)
-⚠️ R² 分数 0.9817 < 0.80 或 MAPE 11.10% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h64_l3_drop0.15_lr0.0005_mse_r2_0.9817.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h64_l3_drop0.15_lr0.0005_mse_r2_0.9817_loss.png
+Epoch   1/400 | Train Loss: 0.332706 | Val Loss: 0.111473 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.095555 | Val Loss: 0.055791 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.077746 | Val Loss: 0.055882 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.063218 | Val Loss: 0.055809 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.057192 | Val Loss: 0.055783 | LR: 0.000405
+早停触发于 epoch 48
+测试集整体 R² (决定系数): 0.9962 , MSE: 0.000000 , MAE: 0.000091 (辅助MAPE: 3.50%)
+✅ R² 分数 0.9962 >= 0.80 且 MAPE 3.50% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h64_l3_drop0.15_lr0.0005_mse_r2_0.9962.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h64_l3_drop0.15_lr0.0005_mse_r2_0.9962_loss.png
 
 ==================================================
 进度: 5/24
 参数: hidden=64, layers=4, dropout=0.3, lr=0.0005, patience=15, loss_type=huber
-Epoch   1/400 | Train Loss: 0.496761 | Val Loss: 0.518439 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.109453 | Val Loss: 0.083753 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.036075 | Val Loss: 0.023103 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.030723 | Val Loss: 0.022004 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.030702 | Val Loss: 0.017754 | LR: 0.000405
-Epoch  50/400 | Train Loss: 0.031649 | Val Loss: 0.026533 | LR: 0.000405
-Epoch  60/400 | Train Loss: 0.026129 | Val Loss: 0.026891 | LR: 0.000365
-Epoch  70/400 | Train Loss: 0.026290 | Val Loss: 0.019400 | LR: 0.000365
-早停触发于 epoch 78
-测试集整体 R² (决定系数): 0.9810 , MSE: 0.000000 , MAE: 0.000264 (辅助MAPE: 12.11%)
-⚠️ R² 分数 0.9810 < 0.80 或 MAPE 12.11% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h64_l4_drop0.3_lr0.0005_huber_r2_0.9810.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h64_l4_drop0.3_lr0.0005_huber_r2_0.9810_loss.png
+Epoch   1/400 | Train Loss: 0.181055 | Val Loss: 0.053596 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.066438 | Val Loss: 0.022475 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.037783 | Val Loss: 0.022390 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.027326 | Val Loss: 0.022301 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.024548 | Val Loss: 0.022293 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.023783 | Val Loss: 0.022304 | LR: 0.000405
+Epoch  60/400 | Train Loss: 0.023590 | Val Loss: 0.022295 | LR: 0.000365
+Epoch  70/400 | Train Loss: 0.023460 | Val Loss: 0.022293 | LR: 0.000365
+Epoch  80/400 | Train Loss: 0.023338 | Val Loss: 0.022278 | LR: 0.000328
+早停触发于 epoch 88
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000080 (辅助MAPE: 2.88%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.88% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h64_l4_drop0.3_lr0.0005_huber_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h64_l4_drop0.3_lr0.0005_huber_r2_0.9963_loss.png
 
 ==================================================
 进度: 6/24
 参数: hidden=64, layers=4, dropout=0.3, lr=0.0005, patience=15, loss_type=mse
-Epoch   1/400 | Train Loss: 0.999722 | Val Loss: 1.048972 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.257750 | Val Loss: 0.271045 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.079110 | Val Loss: 0.063682 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.058589 | Val Loss: 0.047823 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.063137 | Val Loss: 0.049552 | LR: 0.000405
-Epoch  50/400 | Train Loss: 0.054142 | Val Loss: 0.042679 | LR: 0.000405
-Epoch  60/400 | Train Loss: 0.050630 | Val Loss: 0.036086 | LR: 0.000365
-Epoch  70/400 | Train Loss: 0.052641 | Val Loss: 0.040705 | LR: 0.000365
-Epoch  80/400 | Train Loss: 0.051188 | Val Loss: 0.037473 | LR: 0.000328
-Epoch  90/400 | Train Loss: 0.049155 | Val Loss: 0.036594 | LR: 0.000328
-早停触发于 epoch 98
-测试集整体 R² (决定系数): 0.9798 , MSE: 0.000000 , MAE: 0.000258 (辅助MAPE: 11.39%)
-⚠️ R² 分数 0.9798 < 0.80 或 MAPE 11.39% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h64_l4_drop0.3_lr0.0005_mse_r2_0.9798.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h64_l4_drop0.3_lr0.0005_mse_r2_0.9798_loss.png
+Epoch   1/400 | Train Loss: 0.398160 | Val Loss: 0.112440 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.126649 | Val Loss: 0.056191 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.067473 | Val Loss: 0.055740 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.056423 | Val Loss: 0.055621 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.055347 | Val Loss: 0.055633 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.054408 | Val Loss: 0.055613 | LR: 0.000405
+早停触发于 epoch 54
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000086 (辅助MAPE: 3.16%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 3.16% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h64_l4_drop0.3_lr0.0005_mse_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h64_l4_drop0.3_lr0.0005_mse_r2_0.9963_loss.png
 
 ==================================================
 进度: 7/24
 参数: hidden=64, layers=4, dropout=0.15, lr=0.0005, patience=15, loss_type=huber
-Epoch   1/400 | Train Loss: 0.494655 | Val Loss: 0.517829 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.099870 | Val Loss: 0.098760 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.031940 | Val Loss: 0.025623 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.025754 | Val Loss: 0.029054 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.024086 | Val Loss: 0.021993 | LR: 0.000405
-Epoch  50/400 | Train Loss: 0.022916 | Val Loss: 0.029392 | LR: 0.000405
-Epoch  60/400 | Train Loss: 0.024509 | Val Loss: 0.031137 | LR: 0.000365
-早停触发于 epoch 67
-测试集整体 R² (决定系数): 0.9774 , MSE: 0.000000 , MAE: 0.000266 (辅助MAPE: 12.51%)
-⚠️ R² 分数 0.9774 < 0.80 或 MAPE 12.51% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h64_l4_drop0.15_lr0.0005_huber_r2_0.9774.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h64_l4_drop0.15_lr0.0005_huber_r2_0.9774_loss.png
+Epoch   1/400 | Train Loss: 0.161790 | Val Loss: 0.060595 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.045780 | Val Loss: 0.022347 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.036036 | Val Loss: 0.022438 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.026302 | Val Loss: 0.022322 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.024162 | Val Loss: 0.022312 | LR: 0.000405
+早停触发于 epoch 41
+测试集整体 R² (决定系数): 0.9962 , MSE: 0.000000 , MAE: 0.000086 (辅助MAPE: 3.19%)
+✅ R² 分数 0.9962 >= 0.80 且 MAPE 3.19% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h64_l4_drop0.15_lr0.0005_huber_r2_0.9962.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h64_l4_drop0.15_lr0.0005_huber_r2_0.9962_loss.png
 
 ==================================================
 进度: 8/24
 参数: hidden=64, layers=4, dropout=0.15, lr=0.0005, patience=15, loss_type=mse
-Epoch   1/400 | Train Loss: 1.001670 | Val Loss: 1.052008 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.247342 | Val Loss: 0.209801 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.065969 | Val Loss: 0.060636 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.051947 | Val Loss: 0.082789 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.059705 | Val Loss: 0.050671 | LR: 0.000405
-Epoch  50/400 | Train Loss: 0.051187 | Val Loss: 0.057146 | LR: 0.000405
-Epoch  60/400 | Train Loss: 0.047411 | Val Loss: 0.040833 | LR: 0.000365
-Epoch  70/400 | Train Loss: 0.046207 | Val Loss: 0.040166 | LR: 0.000365
-Epoch  80/400 | Train Loss: 0.045173 | Val Loss: 0.061661 | LR: 0.000328
-早停触发于 epoch 89
-测试集整体 R² (决定系数): 0.9787 , MSE: 0.000000 , MAE: 0.000264 (辅助MAPE: 12.34%)
-⚠️ R² 分数 0.9787 < 0.80 或 MAPE 12.34% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h64_l4_drop0.15_lr0.0005_mse_r2_0.9787.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h64_l4_drop0.15_lr0.0005_mse_r2_0.9787_loss.png
+Epoch   1/400 | Train Loss: 0.291484 | Val Loss: 0.112205 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.097579 | Val Loss: 0.055715 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.082758 | Val Loss: 0.055996 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.069611 | Val Loss: 0.055711 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.060057 | Val Loss: 0.055679 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.056234 | Val Loss: 0.055615 | LR: 0.000405
+Epoch  60/400 | Train Loss: 0.055204 | Val Loss: 0.055633 | LR: 0.000365
+早停触发于 epoch 61
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000083 (辅助MAPE: 3.05%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 3.05% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h64_l4_drop0.15_lr0.0005_mse_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h64_l4_drop0.15_lr0.0005_mse_r2_0.9963_loss.png
 
 ==================================================
 进度: 9/24
 参数: hidden=128, layers=3, dropout=0.3, lr=0.0005, patience=15, loss_type=huber
-Epoch   1/400 | Train Loss: 0.492219 | Val Loss: 0.517653 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.122285 | Val Loss: 0.128660 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.030212 | Val Loss: 0.033732 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.025511 | Val Loss: 0.024764 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.025819 | Val Loss: 0.020569 | LR: 0.000405
-Epoch  50/400 | Train Loss: 0.022123 | Val Loss: 0.025368 | LR: 0.000405
-Epoch  60/400 | Train Loss: 0.024355 | Val Loss: 0.025477 | LR: 0.000365
-早停触发于 epoch 66
-测试集整体 R² (决定系数): 0.9791 , MSE: 0.000000 , MAE: 0.000249 (辅助MAPE: 12.18%)
-⚠️ R² 分数 0.9791 < 0.80 或 MAPE 12.18% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h128_l3_drop0.3_lr0.0005_huber_r2_0.9791.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h128_l3_drop0.3_lr0.0005_huber_r2_0.9791_loss.png
+Epoch   1/400 | Train Loss: 0.140790 | Val Loss: 0.030850 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.058809 | Val Loss: 0.022623 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.028128 | Val Loss: 0.022368 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.024631 | Val Loss: 0.022349 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.023798 | Val Loss: 0.022314 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.023582 | Val Loss: 0.022331 | LR: 0.000405
+早停触发于 epoch 52
+测试集整体 R² (决定系数): 0.9962 , MSE: 0.000000 , MAE: 0.000084 (辅助MAPE: 3.21%)
+✅ R² 分数 0.9962 >= 0.80 且 MAPE 3.21% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h128_l3_drop0.3_lr0.0005_huber_r2_0.9962.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h128_l3_drop0.3_lr0.0005_huber_r2_0.9962_loss.png
 
 ==================================================
 进度: 10/24
 参数: hidden=128, layers=3, dropout=0.3, lr=0.0005, patience=15, loss_type=mse
-Epoch   1/400 | Train Loss: 0.993205 | Val Loss: 1.047207 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.215841 | Val Loss: 0.153243 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.057923 | Val Loss: 0.061300 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.047026 | Val Loss: 0.033962 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.076305 | Val Loss: 0.186352 | LR: 0.000405
-Epoch  50/400 | Train Loss: 0.048334 | Val Loss: 0.031898 | LR: 0.000405
-Epoch  60/400 | Train Loss: 0.042702 | Val Loss: 0.049338 | LR: 0.000365
-早停触发于 epoch 65
-测试集整体 R² (决定系数): 0.9776 , MSE: 0.000000 , MAE: 0.000261 (辅助MAPE: 12.46%)
-⚠️ R² 分数 0.9776 < 0.80 或 MAPE 12.46% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h128_l3_drop0.3_lr0.0005_mse_r2_0.9776.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h128_l3_drop0.3_lr0.0005_mse_r2_0.9776_loss.png
+Epoch   1/400 | Train Loss: 0.291809 | Val Loss: 0.071717 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.111468 | Val Loss: 0.056176 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.060359 | Val Loss: 0.055716 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.055691 | Val Loss: 0.055771 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.054754 | Val Loss: 0.055765 | LR: 0.000405
+早停触发于 epoch 42
+测试集整体 R² (决定系数): 0.9962 , MSE: 0.000000 , MAE: 0.000089 (辅助MAPE: 3.34%)
+✅ R² 分数 0.9962 >= 0.80 且 MAPE 3.34% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h128_l3_drop0.3_lr0.0005_mse_r2_0.9962.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h128_l3_drop0.3_lr0.0005_mse_r2_0.9962_loss.png
 
 ==================================================
 进度: 11/24
 参数: hidden=128, layers=3, dropout=0.15, lr=0.0005, patience=15, loss_type=huber
-Epoch   1/400 | Train Loss: 0.491667 | Val Loss: 0.517393 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.108444 | Val Loss: 0.149344 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.032391 | Val Loss: 0.035346 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.024181 | Val Loss: 0.021457 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.023416 | Val Loss: 0.021544 | LR: 0.000405
-Epoch  50/400 | Train Loss: 0.022268 | Val Loss: 0.038926 | LR: 0.000405
-Epoch  60/400 | Train Loss: 0.019383 | Val Loss: 0.018803 | LR: 0.000365
-早停触发于 epoch 63
-测试集整体 R² (决定系数): 0.9836 , MSE: 0.000000 , MAE: 0.000250 (辅助MAPE: 12.23%)
-⚠️ R² 分数 0.9836 < 0.80 或 MAPE 12.23% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h128_l3_drop0.15_lr0.0005_huber_r2_0.9836.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h128_l3_drop0.15_lr0.0005_huber_r2_0.9836_loss.png
+Epoch   1/400 | Train Loss: 0.095504 | Val Loss: 0.032295 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.043824 | Val Loss: 0.022730 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.031818 | Val Loss: 0.022427 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.024780 | Val Loss: 0.022377 | LR: 0.000450
+早停触发于 epoch 36
+测试集整体 R² (决定系数): 0.9962 , MSE: 0.000000 , MAE: 0.000088 (辅助MAPE: 3.32%)
+✅ R² 分数 0.9962 >= 0.80 且 MAPE 3.32% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h128_l3_drop0.15_lr0.0005_huber_r2_0.9962.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h128_l3_drop0.15_lr0.0005_huber_r2_0.9962_loss.png
 
 ==================================================
 进度: 12/24
 参数: hidden=128, layers=3, dropout=0.15, lr=0.0005, patience=15, loss_type=mse
-Epoch   1/400 | Train Loss: 0.990124 | Val Loss: 1.048837 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.193029 | Val Loss: 0.281419 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.070414 | Val Loss: 0.059412 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.065596 | Val Loss: 0.070356 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.049020 | Val Loss: 0.047765 | LR: 0.000405
-Epoch  50/400 | Train Loss: 0.043569 | Val Loss: 0.052480 | LR: 0.000405
-早停触发于 epoch 53
-测试集整体 R² (决定系数): 0.9769 , MSE: 0.000000 , MAE: 0.000289 (辅助MAPE: 14.04%)
-⚠️ R² 分数 0.9769 < 0.80 或 MAPE 14.04% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h128_l3_drop0.15_lr0.0005_mse_r2_0.9769.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h128_l3_drop0.15_lr0.0005_mse_r2_0.9769_loss.png
+Epoch   1/400 | Train Loss: 0.249756 | Val Loss: 0.076277 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.095786 | Val Loss: 0.056012 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.066484 | Val Loss: 0.055992 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.056118 | Val Loss: 0.055808 | LR: 0.000450
+早停触发于 epoch 32
+测试集整体 R² (决定系数): 0.9960 , MSE: 0.000000 , MAE: 0.000106 (辅助MAPE: 4.27%)
+✅ R² 分数 0.9960 >= 0.80 且 MAPE 4.27% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h128_l3_drop0.15_lr0.0005_mse_r2_0.9960.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h128_l3_drop0.15_lr0.0005_mse_r2_0.9960_loss.png
 
 ==================================================
 进度: 13/24
 参数: hidden=128, layers=4, dropout=0.3, lr=0.0005, patience=15, loss_type=huber
-Epoch   1/400 | Train Loss: 0.494067 | Val Loss: 0.518654 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.095504 | Val Loss: 0.126702 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.039475 | Val Loss: 0.046629 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.027077 | Val Loss: 0.018206 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.026359 | Val Loss: 0.020300 | LR: 0.000405
-Epoch  50/400 | Train Loss: 0.021658 | Val Loss: 0.016431 | LR: 0.000405
-Epoch  60/400 | Train Loss: 0.023801 | Val Loss: 0.015955 | LR: 0.000365
-Epoch  70/400 | Train Loss: 0.021088 | Val Loss: 0.023396 | LR: 0.000365
-Epoch  80/400 | Train Loss: 0.022601 | Val Loss: 0.018466 | LR: 0.000328
-早停触发于 epoch 84
-测试集整体 R² (决定系数): 0.9829 , MSE: 0.000000 , MAE: 0.000234 (辅助MAPE: 10.76%)
-⚠️ R² 分数 0.9829 < 0.80 或 MAPE 10.76% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h128_l4_drop0.3_lr0.0005_huber_r2_0.9829.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h128_l4_drop0.3_lr0.0005_huber_r2_0.9829_loss.png
+Epoch   1/400 | Train Loss: 0.143340 | Val Loss: 0.033213 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.054020 | Val Loss: 0.022571 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.026552 | Val Loss: 0.022391 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.024456 | Val Loss: 0.022343 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.024038 | Val Loss: 0.022359 | LR: 0.000405
+早停触发于 epoch 48
+测试集整体 R² (决定系数): 0.9962 , MSE: 0.000000 , MAE: 0.000087 (辅助MAPE: 3.37%)
+✅ R² 分数 0.9962 >= 0.80 且 MAPE 3.37% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h128_l4_drop0.3_lr0.0005_huber_r2_0.9962.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h128_l4_drop0.3_lr0.0005_huber_r2_0.9962_loss.png
 
 ==================================================
 进度: 14/24
 参数: hidden=128, layers=4, dropout=0.3, lr=0.0005, patience=15, loss_type=mse
-Epoch   1/400 | Train Loss: 1.003768 | Val Loss: 1.055619 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.203877 | Val Loss: 0.124496 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.077090 | Val Loss: 0.071607 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.080366 | Val Loss: 0.199150 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.053103 | Val Loss: 0.045133 | LR: 0.000405
-Epoch  50/400 | Train Loss: 0.048382 | Val Loss: 0.036610 | LR: 0.000405
-Epoch  60/400 | Train Loss: 0.055637 | Val Loss: 0.035640 | LR: 0.000365
-Epoch  70/400 | Train Loss: 0.046442 | Val Loss: 0.060265 | LR: 0.000365
-Epoch  80/400 | Train Loss: 0.045433 | Val Loss: 0.044762 | LR: 0.000328
-早停触发于 epoch 88
-测试集整体 R² (决定系数): 0.9750 , MSE: 0.000001 , MAE: 0.000261 (辅助MAPE: 13.57%)
-⚠️ R² 分数 0.9750 < 0.80 或 MAPE 13.57% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h128_l4_drop0.3_lr0.0005_mse_r2_0.9750.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h128_l4_drop0.3_lr0.0005_mse_r2_0.9750_loss.png
+Epoch   1/400 | Train Loss: 0.285461 | Val Loss: 0.070290 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.106718 | Val Loss: 0.056644 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.057417 | Val Loss: 0.055708 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.055513 | Val Loss: 0.055607 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.054783 | Val Loss: 0.055738 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.054607 | Val Loss: 0.055623 | LR: 0.000405
+Epoch  60/400 | Train Loss: 0.054444 | Val Loss: 0.055740 | LR: 0.000365
+早停触发于 epoch 66
+测试集整体 R² (决定系数): 0.9962 , MSE: 0.000000 , MAE: 0.000085 (辅助MAPE: 3.19%)
+✅ R² 分数 0.9962 >= 0.80 且 MAPE 3.19% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h128_l4_drop0.3_lr0.0005_mse_r2_0.9962.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h128_l4_drop0.3_lr0.0005_mse_r2_0.9962_loss.png
 
 ==================================================
 进度: 15/24
 参数: hidden=128, layers=4, dropout=0.15, lr=0.0005, patience=15, loss_type=huber
-Epoch   1/400 | Train Loss: 0.496252 | Val Loss: 0.519760 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.057440 | Val Loss: 0.044579 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.022963 | Val Loss: 0.017941 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.024365 | Val Loss: 0.021297 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.022478 | Val Loss: 0.023311 | LR: 0.000405
-Epoch  50/400 | Train Loss: 0.020279 | Val Loss: 0.018283 | LR: 0.000405
-早停触发于 epoch 56
-测试集整体 R² (决定系数): 0.9798 , MSE: 0.000000 , MAE: 0.000252 (辅助MAPE: 11.97%)
-⚠️ R² 分数 0.9798 < 0.80 或 MAPE 11.97% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h128_l4_drop0.15_lr0.0005_huber_r2_0.9798.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h128_l4_drop0.15_lr0.0005_huber_r2_0.9798_loss.png
+Epoch   1/400 | Train Loss: 0.120179 | Val Loss: 0.031458 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.044162 | Val Loss: 0.022581 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.030143 | Val Loss: 0.022422 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.024350 | Val Loss: 0.022345 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.023567 | Val Loss: 0.022341 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.023333 | Val Loss: 0.022350 | LR: 0.000405
+Epoch  60/400 | Train Loss: 0.023302 | Val Loss: 0.022302 | LR: 0.000365
+早停触发于 epoch 62
+测试集整体 R² (决定系数): 0.9962 , MSE: 0.000000 , MAE: 0.000084 (辅助MAPE: 3.21%)
+✅ R² 分数 0.9962 >= 0.80 且 MAPE 3.21% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h128_l4_drop0.15_lr0.0005_huber_r2_0.9962.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h128_l4_drop0.15_lr0.0005_huber_r2_0.9962_loss.png
 
 ==================================================
 进度: 16/24
 参数: hidden=128, layers=4, dropout=0.15, lr=0.0005, patience=15, loss_type=mse
-Epoch   1/400 | Train Loss: 0.997646 | Val Loss: 1.049361 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.164434 | Val Loss: 0.124208 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.065653 | Val Loss: 0.105265 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.060505 | Val Loss: 0.075019 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.043128 | Val Loss: 0.052285 | LR: 0.000405
-早停触发于 epoch 41
-测试集整体 R² (决定系数): 0.9752 , MSE: 0.000001 , MAE: 0.000297 (辅助MAPE: 13.52%)
-⚠️ R² 分数 0.9752 < 0.80 或 MAPE 13.52% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h128_l4_drop0.15_lr0.0005_mse_r2_0.9752.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h128_l4_drop0.15_lr0.0005_mse_r2_0.9752_loss.png
+Epoch   1/400 | Train Loss: 0.202020 | Val Loss: 0.070358 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.090570 | Val Loss: 0.056496 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.066016 | Val Loss: 0.055996 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.056384 | Val Loss: 0.055798 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.054537 | Val Loss: 0.055800 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.054097 | Val Loss: 0.055785 | LR: 0.000405
+Epoch  60/400 | Train Loss: 0.054213 | Val Loss: 0.055710 | LR: 0.000365
+早停触发于 epoch 60
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000085 (辅助MAPE: 3.27%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 3.27% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h128_l4_drop0.15_lr0.0005_mse_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h128_l4_drop0.15_lr0.0005_mse_r2_0.9963_loss.png
 
 ==================================================
 进度: 17/24
 参数: hidden=256, layers=3, dropout=0.3, lr=0.0005, patience=15, loss_type=huber
-Epoch   1/400 | Train Loss: 0.484347 | Val Loss: 0.515302 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.090523 | Val Loss: 0.130586 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.028836 | Val Loss: 0.027789 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.034526 | Val Loss: 0.035524 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.025021 | Val Loss: 0.018658 | LR: 0.000405
-Epoch  50/400 | Train Loss: 0.032654 | Val Loss: 0.019103 | LR: 0.000405
-早停触发于 epoch 55
-测试集整体 R² (决定系数): 0.9712 , MSE: 0.000001 , MAE: 0.000324 (辅助MAPE: 16.15%)
-⚠️ R² 分数 0.9712 < 0.80 或 MAPE 16.15% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h256_l3_drop0.3_lr0.0005_huber_r2_0.9712.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h256_l3_drop0.3_lr0.0005_huber_r2_0.9712_loss.png
+Epoch   1/400 | Train Loss: 0.133608 | Val Loss: 0.035693 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.049777 | Val Loss: 0.022656 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.025424 | Val Loss: 0.022426 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.023836 | Val Loss: 0.022309 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.023569 | Val Loss: 0.022344 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.023424 | Val Loss: 0.022335 | LR: 0.000405
+早停触发于 epoch 59
+测试集整体 R² (决定系数): 0.9962 , MSE: 0.000000 , MAE: 0.000086 (辅助MAPE: 3.20%)
+✅ R² 分数 0.9962 >= 0.80 且 MAPE 3.20% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h256_l3_drop0.3_lr0.0005_huber_r2_0.9962.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h256_l3_drop0.3_lr0.0005_huber_r2_0.9962_loss.png
 
 ==================================================
 进度: 18/24
 参数: hidden=256, layers=3, dropout=0.3, lr=0.0005, patience=15, loss_type=mse
-Epoch   1/400 | Train Loss: 0.984925 | Val Loss: 1.042635 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.168403 | Val Loss: 0.171160 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.070526 | Val Loss: 0.049770 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.085737 | Val Loss: 0.076894 | LR: 0.000450
-早停触发于 epoch 35
-测试集整体 R² (决定系数): 0.9600 , MSE: 0.000001 , MAE: 0.000400 (辅助MAPE: 21.51%)
-⚠️ R² 分数 0.9600 < 0.80 或 MAPE 21.51% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h256_l3_drop0.3_lr0.0005_mse_r2_0.9600.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h256_l3_drop0.3_lr0.0005_mse_r2_0.9600_loss.png
+Epoch   1/400 | Train Loss: 0.286747 | Val Loss: 0.068928 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.110154 | Val Loss: 0.057468 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.058924 | Val Loss: 0.055818 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.055508 | Val Loss: 0.055979 | LR: 0.000450
+早停触发于 epoch 36
+测试集整体 R² (决定系数): 0.9961 , MSE: 0.000000 , MAE: 0.000098 (辅助MAPE: 3.91%)
+✅ R² 分数 0.9961 >= 0.80 且 MAPE 3.91% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h256_l3_drop0.3_lr0.0005_mse_r2_0.9961.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h256_l3_drop0.3_lr0.0005_mse_r2_0.9961_loss.png
 
 ==================================================
 进度: 19/24
 参数: hidden=256, layers=3, dropout=0.15, lr=0.0005, patience=15, loss_type=huber
-Epoch   1/400 | Train Loss: 0.486852 | Val Loss: 0.515829 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.077700 | Val Loss: 0.064858 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.030612 | Val Loss: 0.041412 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.024628 | Val Loss: 0.033348 | LR: 0.000450
-早停触发于 epoch 39
-测试集整体 R² (决定系数): 0.9718 , MSE: 0.000001 , MAE: 0.000353 (辅助MAPE: 17.67%)
-⚠️ R² 分数 0.9718 < 0.80 或 MAPE 17.67% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h256_l3_drop0.15_lr0.0005_huber_r2_0.9718.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h256_l3_drop0.15_lr0.0005_huber_r2_0.9718_loss.png
+Epoch   1/400 | Train Loss: 0.094906 | Val Loss: 0.031410 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.039720 | Val Loss: 0.022609 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.025373 | Val Loss: 0.022643 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.023719 | Val Loss: 0.022420 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.023485 | Val Loss: 0.022423 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.023344 | Val Loss: 0.022369 | LR: 0.000405
+Epoch  60/400 | Train Loss: 0.023293 | Val Loss: 0.022320 | LR: 0.000365
+Epoch  70/400 | Train Loss: 0.023202 | Val Loss: 0.022332 | LR: 0.000365
+早停触发于 epoch 78
+测试集整体 R² (决定系数): 0.9961 , MSE: 0.000000 , MAE: 0.000087 (辅助MAPE: 3.25%)
+✅ R² 分数 0.9961 >= 0.80 且 MAPE 3.25% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h256_l3_drop0.15_lr0.0005_huber_r2_0.9961.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h256_l3_drop0.15_lr0.0005_huber_r2_0.9961_loss.png
 
 ==================================================
 进度: 20/24
 参数: hidden=256, layers=3, dropout=0.15, lr=0.0005, patience=15, loss_type=mse
-Epoch   1/400 | Train Loss: 0.981265 | Val Loss: 1.045230 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.177409 | Val Loss: 0.509718 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.071111 | Val Loss: 0.088681 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.058436 | Val Loss: 0.054765 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.060245 | Val Loss: 0.065799 | LR: 0.000405
-Epoch  50/400 | Train Loss: 0.048930 | Val Loss: 0.099397 | LR: 0.000405
-早停触发于 epoch 59
-测试集整体 R² (决定系数): 0.9738 , MSE: 0.000001 , MAE: 0.000369 (辅助MAPE: 16.90%)
-⚠️ R² 分数 0.9738 < 0.80 或 MAPE 16.90% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h256_l3_drop0.15_lr0.0005_mse_r2_0.9738.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h256_l3_drop0.15_lr0.0005_mse_r2_0.9738_loss.png
+Epoch   1/400 | Train Loss: 0.190101 | Val Loss: 0.065714 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.097707 | Val Loss: 0.057269 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.066769 | Val Loss: 0.056156 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.055545 | Val Loss: 0.055869 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.054805 | Val Loss: 0.055810 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.054336 | Val Loss: 0.055868 | LR: 0.000405
+Epoch  60/400 | Train Loss: 0.053857 | Val Loss: 0.055817 | LR: 0.000365
+Epoch  70/400 | Train Loss: 0.053754 | Val Loss: 0.055750 | LR: 0.000365
+Epoch  80/400 | Train Loss: 0.053477 | Val Loss: 0.055620 | LR: 0.000328
+Epoch  90/400 | Train Loss: 0.053549 | Val Loss: 0.055618 | LR: 0.000328
+Epoch 100/400 | Train Loss: 0.052613 | Val Loss: 0.055193 | LR: 0.000295
+Epoch 110/400 | Train Loss: 0.051675 | Val Loss: 0.054861 | LR: 0.000295
+Epoch 120/400 | Train Loss: 0.051239 | Val Loss: 0.057293 | LR: 0.000266
+早停触发于 epoch 128
+测试集整体 R² (决定系数): 0.9958 , MSE: 0.000000 , MAE: 0.000125 (辅助MAPE: 5.61%)
+✅ R² 分数 0.9958 >= 0.80 且 MAPE 5.61% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h256_l3_drop0.15_lr0.0005_mse_r2_0.9958.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h256_l3_drop0.15_lr0.0005_mse_r2_0.9958_loss.png
 
 ==================================================
 进度: 21/24
 参数: hidden=256, layers=4, dropout=0.3, lr=0.0005, patience=15, loss_type=huber
-Epoch   1/400 | Train Loss: 0.492806 | Val Loss: 0.518130 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.067780 | Val Loss: 0.067072 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.034564 | Val Loss: 0.052887 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.025977 | Val Loss: 0.028254 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.022878 | Val Loss: 0.067120 | LR: 0.000405
-早停触发于 epoch 42
-测试集整体 R² (决定系数): 0.9764 , MSE: 0.000000 , MAE: 0.000283 (辅助MAPE: 13.38%)
-⚠️ R² 分数 0.9764 < 0.80 或 MAPE 13.38% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h256_l4_drop0.3_lr0.0005_huber_r2_0.9764.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h256_l4_drop0.3_lr0.0005_huber_r2_0.9764_loss.png
+Epoch   1/400 | Train Loss: 0.135087 | Val Loss: 0.029795 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.049881 | Val Loss: 0.023088 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.024751 | Val Loss: 0.022420 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.023827 | Val Loss: 0.022378 | LR: 0.000450
+早停触发于 epoch 38
+测试集整体 R² (决定系数): 0.9962 , MSE: 0.000000 , MAE: 0.000090 (辅助MAPE: 3.51%)
+✅ R² 分数 0.9962 >= 0.80 且 MAPE 3.51% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h256_l4_drop0.3_lr0.0005_huber_r2_0.9962.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h256_l4_drop0.3_lr0.0005_huber_r2_0.9962_loss.png
 
 ==================================================
 进度: 22/24
 参数: hidden=256, layers=4, dropout=0.3, lr=0.0005, patience=15, loss_type=mse
-Epoch   1/400 | Train Loss: 0.993784 | Val Loss: 1.050019 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.175175 | Val Loss: 0.124423 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.084319 | Val Loss: 0.121551 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.056238 | Val Loss: 0.052015 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.060088 | Val Loss: 0.082734 | LR: 0.000405
-早停触发于 epoch 43
-测试集整体 R² (决定系数): 0.9725 , MSE: 0.000001 , MAE: 0.000303 (辅助MAPE: 15.10%)
-⚠️ R² 分数 0.9725 < 0.80 或 MAPE 15.10% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h256_l4_drop0.3_lr0.0005_mse_r2_0.9725.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h256_l4_drop0.3_lr0.0005_mse_r2_0.9725_loss.png
+Epoch   1/400 | Train Loss: 0.279506 | Val Loss: 0.065348 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.092534 | Val Loss: 0.057321 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.056568 | Val Loss: 0.055687 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.055118 | Val Loss: 0.055806 | LR: 0.000450
+早停触发于 epoch 35
+测试集整体 R² (决定系数): 0.9960 , MSE: 0.000000 , MAE: 0.000106 (辅助MAPE: 4.34%)
+✅ R² 分数 0.9960 >= 0.80 且 MAPE 4.34% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h256_l4_drop0.3_lr0.0005_mse_r2_0.9960.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h256_l4_drop0.3_lr0.0005_mse_r2_0.9960_loss.png
 
 ==================================================
 进度: 23/24
 参数: hidden=256, layers=4, dropout=0.15, lr=0.0005, patience=15, loss_type=huber
-Epoch   1/400 | Train Loss: 0.490554 | Val Loss: 0.517320 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.048161 | Val Loss: 0.096435 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.027458 | Val Loss: 0.027668 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.022917 | Val Loss: 0.020765 | LR: 0.000450
-Epoch  40/400 | Train Loss: 0.028130 | Val Loss: 0.023915 | LR: 0.000405
-早停触发于 epoch 49
-测试集整体 R² (决定系数): 0.9785 , MSE: 0.000000 , MAE: 0.000278 (辅助MAPE: 12.44%)
-⚠️ R² 分数 0.9785 < 0.80 或 MAPE 12.44% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h256_l4_drop0.15_lr0.0005_huber_r2_0.9785.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h256_l4_drop0.15_lr0.0005_huber_r2_0.9785_loss.png
+Epoch   1/400 | Train Loss: 0.096553 | Val Loss: 0.030112 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.042845 | Val Loss: 0.022857 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.027135 | Val Loss: 0.022528 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.023689 | Val Loss: 0.022470 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.023393 | Val Loss: 0.022376 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.023275 | Val Loss: 0.022326 | LR: 0.000405
+早停触发于 epoch 50
+测试集整体 R² (决定系数): 0.9962 , MSE: 0.000000 , MAE: 0.000090 (辅助MAPE: 3.57%)
+✅ R² 分数 0.9962 >= 0.80 且 MAPE 3.57% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h256_l4_drop0.15_lr0.0005_huber_r2_0.9962.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h256_l4_drop0.15_lr0.0005_huber_r2_0.9962_loss.png
 
 ==================================================
 进度: 24/24
 参数: hidden=256, layers=4, dropout=0.15, lr=0.0005, patience=15, loss_type=mse
-Epoch   1/400 | Train Loss: 0.994262 | Val Loss: 1.048016 | LR: 0.000500
-Epoch  10/400 | Train Loss: 0.158032 | Val Loss: 0.125722 | LR: 0.000500
-Epoch  20/400 | Train Loss: 0.061356 | Val Loss: 0.103971 | LR: 0.000450
-Epoch  30/400 | Train Loss: 0.047951 | Val Loss: 0.052239 | LR: 0.000450
-早停触发于 epoch 38
-测试集整体 R² (决定系数): 0.9699 , MSE: 0.000001 , MAE: 0.000371 (辅助MAPE: 18.03%)
-⚠️ R² 分数 0.9699 < 0.80 或 MAPE 18.03% > 10%，存入 other/ 文件夹
-模型已保存: result\other\Seq2SeqLSTM_h256_l4_drop0.15_lr0.0005_mse_r2_0.9699.pth
-Loss 曲线已保存: result\other\Seq2SeqLSTM_h256_l4_drop0.15_lr0.0005_mse_r2_0.9699_loss.png
+Epoch   1/400 | Train Loss: 0.184699 | Val Loss: 0.067805 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.087544 | Val Loss: 0.057404 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.058641 | Val Loss: 0.056720 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.055146 | Val Loss: 0.055933 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.054453 | Val Loss: 0.055822 | LR: 0.000405
+Epoch  50/400 | Train Loss: 0.054146 | Val Loss: 0.055803 | LR: 0.000405
+Epoch  60/400 | Train Loss: 0.053889 | Val Loss: 0.055805 | LR: 0.000365
+Epoch  70/400 | Train Loss: 0.053421 | Val Loss: 0.055770 | LR: 0.000365
+Epoch  80/400 | Train Loss: 0.053398 | Val Loss: 0.055036 | LR: 0.000328
+Epoch  90/400 | Train Loss: 0.051986 | Val Loss: 0.054362 | LR: 0.000328
+Epoch 100/400 | Train Loss: 0.051139 | Val Loss: 0.053425 | LR: 0.000295
+Epoch 110/400 | Train Loss: 0.050014 | Val Loss: 0.051767 | LR: 0.000295
+Epoch 120/400 | Train Loss: 0.048953 | Val Loss: 0.051937 | LR: 0.000266
+Epoch 130/400 | Train Loss: 0.047687 | Val Loss: 0.051580 | LR: 0.000266
+Epoch 140/400 | Train Loss: 0.046567 | Val Loss: 0.053023 | LR: 0.000239
+Epoch 150/400 | Train Loss: 0.045910 | Val Loss: 0.051419 | LR: 0.000239
+Epoch 160/400 | Train Loss: 0.044534 | Val Loss: 0.047325 | LR: 0.000215
+Epoch 170/400 | Train Loss: 0.041775 | Val Loss: 0.051309 | LR: 0.000215
+早停触发于 epoch 175
+测试集整体 R² (决定系数): 0.9950 , MSE: 0.000000 , MAE: 0.000155 (辅助MAPE: 6.57%)
+✅ R² 分数 0.9950 >= 0.80 且 MAPE 6.57% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\LSTM_h256_l4_drop0.15_lr0.0005_mse_r2_0.9950.pth
+Loss 曲线已保存: result\accuracy_high\LSTM_h256_l4_drop0.15_lr0.0005_mse_r2_0.9950_loss.png
 
 ============================================================
-所有训练完成！本次网格搜索最佳模型 R² = 0.9836
-🏆 最佳模型(R²=0.9836)相关文件已成功提拔并复制到: result\first
-  - 复制成功: Seq2SeqLSTM_h128_l3_drop0.15_lr0.0005_huber_r2_0.9836.pth
-  - 复制成功: Seq2SeqLSTM_h128_l3_drop0.15_lr0.0005_huber_r2_0.9836_loss.png
+所有训练完成！本次网格搜索最佳模型 R² = 0.9963
+🏆 最佳模型(R²=0.9963)相关文件已成功提拔并复制到: result\first
+  - 复制成功: LSTM_h64_l4_drop0.3_lr0.0005_huber_r2_0.9963.pth
+  - 复制成功: LSTM_h64_l4_drop0.3_lr0.0005_huber_r2_0.9963_loss.png
+============================================================
+============================================================
+时序预测模型训练 - 请选择模型类型
+1. Vanilla LSTM (直接多步输出)
+2. Seq2Seq LSTM (Encoder-Decoder + Attention)
+============================================================
+请输入模型编号 (1/2): 2
+
+[系统提示] 数据目录未配置或路径不存在，请在弹出的窗口中选择包含CSV数据的文件夹...
+[系统提示] 成功选择数据路径: C:/Users/Admin/Desktop/最高优先/LSTM/data/杭州市医院
+使用设备: cuda
+🆕 时间特征: 启用 | 残差预测: 启用 | input_size=3
+
+正在从文件夹加载多个CSV文件...
+找到 1 个CSV文件
+文件 42天杭州市医院扶梯rms值记录.csv 长度 1974, 最大样本数 1270, 采用 stride=2
+总样本数: 635, 输入形状: (635, 658, 3), 输出形状: (635, 47)
+划分后 - 训练: 459, 验证: 81, 测试: 95
+
+共有 24 组参数组合待训练
+
+==================================================
+进度: 1/24
+参数: hidden=64, layers=3, dropout=0.3, lr=0.0005, patience=15, loss_type=huber
+Epoch   1/400 | Train Loss: 0.024001 | Val Loss: 0.022493 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.023084 | Val Loss: 0.022257 | LR: 0.000500
+早停触发于 epoch 17
+测试集整体 R² (决定系数): 0.9962 , MSE: 0.000000 , MAE: 0.000082 (辅助MAPE: 2.63%)
+✅ R² 分数 0.9962 >= 0.80 且 MAPE 2.63% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h64_l3_drop0.3_lr0.0005_huber_r2_0.9962.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h64_l3_drop0.3_lr0.0005_huber_r2_0.9962_loss.png
+
+==================================================
+进度: 2/24
+参数: hidden=64, layers=3, dropout=0.3, lr=0.0005, patience=15, loss_type=mse
+Epoch   1/400 | Train Loss: 0.053690 | Val Loss: 0.055550 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.053428 | Val Loss: 0.055517 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.053367 | Val Loss: 0.055478 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.053400 | Val Loss: 0.055512 | LR: 0.000450
+早停触发于 epoch 33
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000069 (辅助MAPE: 2.12%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.12% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h64_l3_drop0.3_lr0.0005_mse_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h64_l3_drop0.3_lr0.0005_mse_r2_0.9963_loss.png
+
+==================================================
+进度: 3/24
+参数: hidden=64, layers=3, dropout=0.15, lr=0.0005, patience=15, loss_type=huber
+Epoch   1/400 | Train Loss: 0.024684 | Val Loss: 0.022343 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.023048 | Val Loss: 0.022279 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.023028 | Val Loss: 0.022275 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.022990 | Val Loss: 0.022269 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.022998 | Val Loss: 0.022273 | LR: 0.000405
+早停触发于 epoch 43
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000070 (辅助MAPE: 2.23%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.23% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h64_l3_drop0.15_lr0.0005_huber_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h64_l3_drop0.15_lr0.0005_huber_r2_0.9963_loss.png
+
+==================================================
+进度: 4/24
+参数: hidden=64, layers=3, dropout=0.15, lr=0.0005, patience=15, loss_type=mse
+Epoch   1/400 | Train Loss: 0.055856 | Val Loss: 0.055846 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.053530 | Val Loss: 0.055495 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.053482 | Val Loss: 0.055492 | LR: 0.000450
+早停触发于 epoch 29
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000070 (辅助MAPE: 2.11%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.11% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h64_l3_drop0.15_lr0.0005_mse_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h64_l3_drop0.15_lr0.0005_mse_r2_0.9963_loss.png
+
+==================================================
+进度: 5/24
+参数: hidden=64, layers=4, dropout=0.3, lr=0.0005, patience=15, loss_type=huber
+Epoch   1/400 | Train Loss: 0.023341 | Val Loss: 0.022279 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.022991 | Val Loss: 0.022269 | LR: 0.000500
+早停触发于 epoch 18
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000069 (辅助MAPE: 2.12%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.12% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h64_l4_drop0.3_lr0.0005_huber_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h64_l4_drop0.3_lr0.0005_huber_r2_0.9963_loss.png
+
+==================================================
+进度: 6/24
+参数: hidden=64, layers=4, dropout=0.3, lr=0.0005, patience=15, loss_type=mse
+Epoch   1/400 | Train Loss: 0.055438 | Val Loss: 0.055949 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.053606 | Val Loss: 0.055466 | LR: 0.000500
+早停触发于 epoch 19
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000070 (辅助MAPE: 2.22%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.22% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h64_l4_drop0.3_lr0.0005_mse_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h64_l4_drop0.3_lr0.0005_mse_r2_0.9963_loss.png
+
+==================================================
+进度: 7/24
+参数: hidden=64, layers=4, dropout=0.15, lr=0.0005, patience=15, loss_type=huber
+Epoch   1/400 | Train Loss: 0.023731 | Val Loss: 0.022624 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.023030 | Val Loss: 0.022262 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.022999 | Val Loss: 0.022277 | LR: 0.000450
+早停触发于 epoch 20
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000071 (辅助MAPE: 2.18%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.18% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h64_l4_drop0.15_lr0.0005_huber_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h64_l4_drop0.15_lr0.0005_huber_r2_0.9963_loss.png
+
+==================================================
+进度: 8/24
+参数: hidden=64, layers=4, dropout=0.15, lr=0.0005, patience=15, loss_type=mse
+Epoch   1/400 | Train Loss: 0.062606 | Val Loss: 0.056058 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.053515 | Val Loss: 0.055477 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.053459 | Val Loss: 0.055472 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.053442 | Val Loss: 0.055459 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.053384 | Val Loss: 0.055469 | LR: 0.000405
+早停触发于 epoch 43
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000069 (辅助MAPE: 2.14%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.14% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h64_l4_drop0.15_lr0.0005_mse_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h64_l4_drop0.15_lr0.0005_mse_r2_0.9963_loss.png
+
+==================================================
+进度: 9/24
+参数: hidden=128, layers=3, dropout=0.3, lr=0.0005, patience=15, loss_type=huber
+Epoch   1/400 | Train Loss: 0.023066 | Val Loss: 0.022296 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.023005 | Val Loss: 0.022262 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.022977 | Val Loss: 0.022272 | LR: 0.000450
+早停触发于 epoch 24
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000069 (辅助MAPE: 2.07%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.07% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h128_l3_drop0.3_lr0.0005_huber_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h128_l3_drop0.3_lr0.0005_huber_r2_0.9963_loss.png
+
+==================================================
+进度: 10/24
+参数: hidden=128, layers=3, dropout=0.3, lr=0.0005, patience=15, loss_type=mse
+Epoch   1/400 | Train Loss: 0.054675 | Val Loss: 0.055791 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.053403 | Val Loss: 0.055485 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.053448 | Val Loss: 0.055460 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.053398 | Val Loss: 0.055477 | LR: 0.000450
+早停触发于 epoch 36
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000074 (辅助MAPE: 2.26%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.26% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h128_l3_drop0.3_lr0.0005_mse_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h128_l3_drop0.3_lr0.0005_mse_r2_0.9963_loss.png
+
+==================================================
+进度: 11/24
+参数: hidden=128, layers=3, dropout=0.15, lr=0.0005, patience=15, loss_type=huber
+Epoch   1/400 | Train Loss: 0.023815 | Val Loss: 0.022567 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.022971 | Val Loss: 0.022262 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.023011 | Val Loss: 0.022266 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.022996 | Val Loss: 0.022271 | LR: 0.000450
+早停触发于 epoch 32
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000070 (辅助MAPE: 2.10%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.10% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h128_l3_drop0.15_lr0.0005_huber_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h128_l3_drop0.15_lr0.0005_huber_r2_0.9963_loss.png
+
+==================================================
+进度: 12/24
+参数: hidden=128, layers=3, dropout=0.15, lr=0.0005, patience=15, loss_type=mse
+Epoch   1/400 | Train Loss: 0.054180 | Val Loss: 0.055497 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.053384 | Val Loss: 0.055477 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.053399 | Val Loss: 0.055506 | LR: 0.000450
+早停触发于 epoch 21
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000071 (辅助MAPE: 2.30%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.30% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h128_l3_drop0.15_lr0.0005_mse_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h128_l3_drop0.15_lr0.0005_mse_r2_0.9963_loss.png
+
+==================================================
+进度: 13/24
+参数: hidden=128, layers=4, dropout=0.3, lr=0.0005, patience=15, loss_type=huber
+Epoch   1/400 | Train Loss: 0.023266 | Val Loss: 0.022295 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.023006 | Val Loss: 0.022268 | LR: 0.000500
+早停触发于 epoch 18
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000068 (辅助MAPE: 2.07%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.07% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h128_l4_drop0.3_lr0.0005_huber_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h128_l4_drop0.3_lr0.0005_huber_r2_0.9963_loss.png
+
+==================================================
+进度: 14/24
+参数: hidden=128, layers=4, dropout=0.3, lr=0.0005, patience=15, loss_type=mse
+Epoch   1/400 | Train Loss: 0.054803 | Val Loss: 0.056186 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.053459 | Val Loss: 0.055491 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.053419 | Val Loss: 0.055465 | LR: 0.000450
+早停触发于 epoch 27
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000071 (辅助MAPE: 2.29%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.29% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h128_l4_drop0.3_lr0.0005_mse_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h128_l4_drop0.3_lr0.0005_mse_r2_0.9963_loss.png
+
+==================================================
+进度: 15/24
+参数: hidden=128, layers=4, dropout=0.15, lr=0.0005, patience=15, loss_type=huber
+Epoch   1/400 | Train Loss: 0.023053 | Val Loss: 0.022266 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.022989 | Val Loss: 0.022281 | LR: 0.000500
+早停触发于 epoch 16
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000069 (辅助MAPE: 2.15%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.15% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h128_l4_drop0.15_lr0.0005_huber_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h128_l4_drop0.15_lr0.0005_huber_r2_0.9963_loss.png
+
+==================================================
+进度: 16/24
+参数: hidden=128, layers=4, dropout=0.15, lr=0.0005, patience=15, loss_type=mse
+Epoch   1/400 | Train Loss: 0.058223 | Val Loss: 0.057070 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.053425 | Val Loss: 0.055484 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.053440 | Val Loss: 0.055484 | LR: 0.000450
+早停触发于 epoch 24
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000072 (辅助MAPE: 2.23%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.23% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h128_l4_drop0.15_lr0.0005_mse_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h128_l4_drop0.15_lr0.0005_mse_r2_0.9963_loss.png
+
+==================================================
+进度: 17/24
+参数: hidden=256, layers=3, dropout=0.3, lr=0.0005, patience=15, loss_type=huber
+Epoch   1/400 | Train Loss: 0.023177 | Val Loss: 0.022328 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.022977 | Val Loss: 0.022267 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.022980 | Val Loss: 0.022301 | LR: 0.000450
+早停触发于 epoch 24
+测试集整体 R² (决定系数): 0.9964 , MSE: 0.000000 , MAE: 0.000071 (辅助MAPE: 2.39%)
+✅ R² 分数 0.9964 >= 0.80 且 MAPE 2.39% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h256_l3_drop0.3_lr0.0005_huber_r2_0.9964.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h256_l3_drop0.3_lr0.0005_huber_r2_0.9964_loss.png
+
+==================================================
+进度: 18/24
+参数: hidden=256, layers=3, dropout=0.3, lr=0.0005, patience=15, loss_type=mse
+Epoch   1/400 | Train Loss: 0.053950 | Val Loss: 0.055637 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.053428 | Val Loss: 0.055463 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.053371 | Val Loss: 0.055489 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.053393 | Val Loss: 0.055507 | LR: 0.000450
+早停触发于 epoch 33
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000071 (辅助MAPE: 2.15%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.15% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h256_l3_drop0.3_lr0.0005_mse_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h256_l3_drop0.3_lr0.0005_mse_r2_0.9963_loss.png
+
+==================================================
+进度: 19/24
+参数: hidden=256, layers=3, dropout=0.15, lr=0.0005, patience=15, loss_type=huber
+Epoch   1/400 | Train Loss: 0.023083 | Val Loss: 0.022282 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.022965 | Val Loss: 0.022275 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.023023 | Val Loss: 0.022321 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.022984 | Val Loss: 0.022285 | LR: 0.000450
+早停触发于 epoch 32
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000070 (辅助MAPE: 2.12%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.12% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h256_l3_drop0.15_lr0.0005_huber_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h256_l3_drop0.15_lr0.0005_huber_r2_0.9963_loss.png
+
+==================================================
+进度: 20/24
+参数: hidden=256, layers=3, dropout=0.15, lr=0.0005, patience=15, loss_type=mse
+Epoch   1/400 | Train Loss: 0.054173 | Val Loss: 0.055781 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.053399 | Val Loss: 0.055529 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.053338 | Val Loss: 0.055488 | LR: 0.000450
+早停触发于 epoch 29
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000071 (辅助MAPE: 2.15%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.15% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h256_l3_drop0.15_lr0.0005_mse_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h256_l3_drop0.15_lr0.0005_mse_r2_0.9963_loss.png
+
+==================================================
+进度: 21/24
+参数: hidden=256, layers=4, dropout=0.3, lr=0.0005, patience=15, loss_type=huber
+Epoch   1/400 | Train Loss: 0.023295 | Val Loss: 0.022351 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.022979 | Val Loss: 0.022266 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.022974 | Val Loss: 0.022266 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.022971 | Val Loss: 0.022259 | LR: 0.000450
+Epoch  40/400 | Train Loss: 0.022967 | Val Loss: 0.022278 | LR: 0.000405
+早停触发于 epoch 47
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000068 (辅助MAPE: 2.06%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.06% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h256_l4_drop0.3_lr0.0005_huber_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h256_l4_drop0.3_lr0.0005_huber_r2_0.9963_loss.png
+
+==================================================
+进度: 22/24
+参数: hidden=256, layers=4, dropout=0.3, lr=0.0005, patience=15, loss_type=mse
+Epoch   1/400 | Train Loss: 0.053664 | Val Loss: 0.055476 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.053451 | Val Loss: 0.055459 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.053381 | Val Loss: 0.055460 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.053377 | Val Loss: 0.055489 | LR: 0.000450
+早停触发于 epoch 34
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000070 (辅助MAPE: 2.17%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.17% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h256_l4_drop0.3_lr0.0005_mse_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h256_l4_drop0.3_lr0.0005_mse_r2_0.9963_loss.png
+
+==================================================
+进度: 23/24
+参数: hidden=256, layers=4, dropout=0.15, lr=0.0005, patience=15, loss_type=huber
+Epoch   1/400 | Train Loss: 0.023054 | Val Loss: 0.022277 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.022978 | Val Loss: 0.022262 | LR: 0.000500
+Epoch  20/400 | Train Loss: 0.022964 | Val Loss: 0.022267 | LR: 0.000450
+Epoch  30/400 | Train Loss: 0.022964 | Val Loss: 0.022275 | LR: 0.000450
+早停触发于 epoch 31
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000070 (辅助MAPE: 2.24%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.24% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h256_l4_drop0.15_lr0.0005_huber_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h256_l4_drop0.15_lr0.0005_huber_r2_0.9963_loss.png
+
+==================================================
+进度: 24/24
+参数: hidden=256, layers=4, dropout=0.15, lr=0.0005, patience=15, loss_type=mse
+Epoch   1/400 | Train Loss: 0.055646 | Val Loss: 0.055466 | LR: 0.000500
+Epoch  10/400 | Train Loss: 0.053364 | Val Loss: 0.055488 | LR: 0.000500
+早停触发于 epoch 16
+测试集整体 R² (决定系数): 0.9963 , MSE: 0.000000 , MAE: 0.000077 (辅助MAPE: 2.49%)
+✅ R² 分数 0.9963 >= 0.80 且 MAPE 2.49% <= 10%，存入 accuracy_high/ 文件夹
+模型已保存: result\accuracy_high\Seq2SeqLSTM_h256_l4_drop0.15_lr0.0005_mse_r2_0.9963.pth
+Loss 曲线已保存: result\accuracy_high\Seq2SeqLSTM_h256_l4_drop0.15_lr0.0005_mse_r2_0.9963_loss.png
+
+============================================================
+所有训练完成！本次网格搜索最佳模型 R² = 0.9964
+🏆 最佳模型(R²=0.9964)相关文件已成功提拔并复制到: result\first
+  - 复制成功: Seq2SeqLSTM_h256_l3_drop0.3_lr0.0005_huber_r2_0.9964.pth
+  - 复制成功: Seq2SeqLSTM_h256_l3_drop0.3_lr0.0005_huber_r2_0.9964_loss.png
 ============================================================
