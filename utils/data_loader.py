@@ -7,14 +7,17 @@ from sklearn.preprocessing import StandardScaler
 
 def load_multiple_csv(data_dir, target_col, seq_len, pred_len,
                       test_size=0.15, val_size=0.15, random_seed=42,
-                      use_time_features=True, period=47):
+                      use_time_features=True, period=47,
+                      use_log_transform=False, stride=None):
     """
     从文件夹读取多个CSV文件，构造训练/验证/测试集。
     支持动态滑窗步长，绝不跨文件采样。
 
-    🆕 v2 改动:
+    v2 改动:
       - use_time_features: 在输入中加入 sin/cos 日内时间编码
-      - 统一 scaler: X 和 y 使用同一个 StandardScaler，保证残差加法在归一化空间合法
+      - 统一 scaler: X 和 y 使用同一个 StandardScaler
+      - use_log_transform: 对 RMS 做 log 变换后再归一化
+      - stride: 可手动指定滑动步长
 
     参数:
         data_dir: 存放CSV文件的文件夹路径
@@ -22,15 +25,16 @@ def load_multiple_csv(data_dir, target_col, seq_len, pred_len,
         seq_len: 输入序列长度（回溯步数）
         pred_len: 预测步长
         test_size: 测试集比例
-        val_size: 验证集比例（相对于训练+验证部分）
-        random_seed: 随机种子（保留，但划分时不打乱顺序）
+        val_size: 验证集比例
+        random_seed: 随机种子
         use_time_features: 是否在输入中加入 sin/cos 编码
         period: 每日周期步数（默认 47）
+        use_log_transform: 是否对 RMS 做 log 变换
+        stride: 滑动步长 (None=自动, 或手动指定整数)
 
     返回:
         X_train_tensor, y_train_tensor, X_val_tensor, y_val_tensor,
         X_test_tensor, y_test_tensor, scaler_X, scaler_y
-        (scaler_X 和 scaler_y 是同一个对象——统一归一化)
     """
     min_req_len = seq_len + pred_len
     all_X, all_y = [], []
@@ -54,6 +58,11 @@ def load_multiple_csv(data_dir, target_col, seq_len, pred_len,
             continue
 
         series = df[target_col].values.astype(np.float32)
+
+        # Log 变换: 压缩数量级差距，让低值和高值区域的误差在 loss 中被同等对待
+        if use_log_transform:
+            series = np.log(series)
+
         n = len(series)
 
         if n < min_req_len:
@@ -61,16 +70,18 @@ def load_multiple_csv(data_dir, target_col, seq_len, pred_len,
             continue
 
         max_samples = n - min_req_len + 1
-        if max_samples < 1000:
-            stride = 1
+        if stride is not None:
+            _stride = stride
+        elif max_samples < 1000:
+            _stride = 1
         elif max_samples < 5000:
-            stride = 2
+            _stride = 2
         else:
-            stride = 10
-        print(f"文件 {file} 长度 {n}, 最大样本数 {max_samples}, 采用 stride={stride}")
+            _stride = 10
+        print(f"文件 {file} 长度 {n}, 最大样本数 {max_samples}, 采用 stride={_stride}")
 
         X_file, y_file = [], []
-        for i in range(0, max_samples, stride):
+        for i in range(0, max_samples, _stride):
             x_rms = series[i : i + seq_len]           # [seq_len]
             y = series[i + seq_len : i + min_req_len]  # [pred_len]
 
@@ -134,6 +145,8 @@ def load_multiple_csv(data_dir, target_col, seq_len, pred_len,
         y_train.flatten()
     ]).reshape(-1, 1)
     scaler.fit(all_train_rms)
+    # 标记是否使用 log 变换，下游 evaluate / predict 据此决定是否 exp 还原
+    scaler.use_log_transform = use_log_transform
 
     # 分别对 X 的 RMS 通道和 y 做变换
     X_train_rms_norm = scaler.transform(X_train_rms.reshape(-1, 1)).reshape(X_train_rms.shape)

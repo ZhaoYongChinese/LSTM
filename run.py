@@ -51,11 +51,19 @@ def main():
     with open(config_path, "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
 
-    # 🆕 读取新配置项（带默认值，兼容旧配置文件）
+    # 读取配置项（带默认值，兼容旧配置文件）
     use_time_features = cfg.get('use_time_features', False)
     use_residual = cfg.get('use_residual', False)
-    # 🆕 自动计算 input_size: RMS通道(1) + sin/cos时间特征(2)
+    use_log_transform = cfg.get('use_log_transform', False)
     input_size = 1 + (2 if use_time_features else 0)
+
+    # 处理 seq_length: 统一为列表 (兼容单个值)
+    seq_lengths = cfg['seq_length']
+    if not isinstance(seq_lengths, list):
+        seq_lengths = [seq_lengths]
+
+    # 处理 stride: null → 自动, 否则用指定值
+    stride_cfg = cfg.get('stride', None)
 
     DATA_DIR = get_data_dir_via_gui(cfg.get("data_dir", ""))
 
@@ -63,151 +71,164 @@ def main():
     np.random.seed(cfg['random_seed'])
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"使用设备: {device}")
-    print(f"🆕 时间特征: {'启用' if use_time_features else '关闭'} | 残差预测: {'启用' if use_residual else '关闭'} | input_size={input_size}")
+    print(f"时间特征: {'ON' if use_time_features else 'OFF'} | 残差: {'ON' if use_residual else 'OFF'} | Log: {'ON' if use_log_transform else 'OFF'}")
+    print(f"seq_len 待测: {seq_lengths} | stride: {stride_cfg if stride_cfg else 'auto'}")
 
-    # ---------- 1. 加载数据 ----------
-    print("\n正在从文件夹加载多个CSV文件...")
-    (X_train, y_train, X_val, y_val, X_test, y_test,
-     scaler_X, scaler_y) = load_multiple_csv(
-        data_dir=DATA_DIR,
-        target_col=cfg['target_column'],
-        seq_len=cfg['seq_length'],
-        pred_len=cfg['output_size'],
-        test_size=cfg['test_size'],
-        val_size=cfg['val_size'],
-        random_seed=cfg['random_seed'],
-        use_time_features=use_time_features,  # 🆕
-        period=cfg['output_size']              # 🆕 周期=预测步数=47
-    )
+    batch_size = cfg.get('batch_size', 64)
 
-    # 🎯 核心修复：移除以下这三行，避免全量数据塞入 GPU 导致 OOM（显存爆炸）
-    # 此时 X_train 等 Tensor 全都在 CPU 内存中安全待命
-    # X_train, y_train = X_train.to(device), y_train.to(device)
-    # X_val, y_val = X_val.to(device), y_val.to(device)
-    # X_test, y_test = X_test.to(device), y_test.to(device)
-
-    # ---------- 2. 参数网格搜索 ----------
-    best_overall_r2 = -float('inf') # R2 越大越好，初始化为负无穷
-    best_model_info = None
+    # ---------- 2. 参数网格 (不含 seq_len, seq_len 在外层循环) ----------
+    # 处理 weight_decay: 兼容旧配置文件
+    weight_decays = cfg.get('weight_decay', [0])
+    if not isinstance(weight_decays, list):
+        weight_decays = [weight_decays]
 
     param_combinations = list(itertools.product(
-        cfg['hidden_size'], cfg['num_layers'], cfg['dropout'], 
-        cfg['learning_rate'], cfg['patience'], cfg['loss_type']
+        cfg['hidden_size'], cfg['num_layers'], cfg['dropout'],
+        cfg['learning_rate'], cfg['patience'], cfg['loss_type'], weight_decays
     ))
-    total = len(param_combinations)
-    print(f"\n共有 {total} 组参数组合待训练")
-    
-    batch_size = cfg.get('batch_size', 64) # 获取批大小配置
+    per_seq = len(param_combinations)
+    total = per_seq * len(seq_lengths)
+    print(f"\n每组seq_len下 {per_seq} 组参数 × {len(seq_lengths)} 个seq_len = 共 {total} 组")
 
-    for idx, (hidden, layers, drop, lr, patience, loss_type) in enumerate(param_combinations):
-        print("\n" + "=" * 50)
-        print(f"进度: {idx+1}/{total}")
-        print(f"参数: hidden={hidden}, layers={layers}, dropout={drop}, lr={lr}, patience={patience}, loss_type={loss_type}")
+    best_overall_mape = float('inf')
+    best_model_info = None
+    global_counter = 0
 
-        if choice == '1':
-            model = LSTMMultiStep(
-                input_size=input_size,         # 🆕 自动计算 (1 + 时间特征)
-                hidden_size=hidden,
-                output_size=cfg['output_size'],
-                num_layers=layers,
-                dropout=drop,
-                use_layer_norm=cfg['use_layer_norm'],
-                use_residual=use_residual       # 🆕 残差跳跃连接
+    # ---------- 3. 外层: 按 seq_len 分组加载数据 ----------
+    for seq_idx, seq_len in enumerate(seq_lengths):
+        print("\n" + "=" * 60)
+        print(f"加载数据 seq_len={seq_len} ({seq_idx+1}/{len(seq_lengths)})")
+        print("=" * 60)
+
+        (X_train, y_train, X_val, y_val, X_test, y_test,
+         scaler_X, scaler_y) = load_multiple_csv(
+            data_dir=DATA_DIR,
+            target_col=cfg['target_column'],
+            seq_len=seq_len,
+            pred_len=cfg['output_size'],
+            test_size=cfg['test_size'],
+            val_size=cfg['val_size'],
+            random_seed=cfg['random_seed'],
+            use_time_features=use_time_features,
+            period=cfg['output_size'],
+            use_log_transform=use_log_transform,
+            stride=stride_cfg
+        )
+
+        # ---------- 内层: 其他参数网格 ----------
+        for hidden, layers, drop, lr, patience, loss_type, wd in param_combinations:
+            global_counter += 1
+            print("\n" + "-" * 50)
+            print(f"进度: {global_counter}/{total} | seq_len={seq_len}")
+            print(f"参数: hidden={hidden}, layers={layers}, dropout={drop}, lr={lr}, patience={patience}, loss={loss_type}, wd={wd}")
+
+            if choice == '1':
+                model = LSTMMultiStep(
+                    input_size=input_size,
+                    hidden_size=hidden,
+                    output_size=cfg['output_size'],
+                    num_layers=layers,
+                    dropout=drop,
+                    use_layer_norm=cfg['use_layer_norm'],
+                    use_residual=use_residual
+                )
+            elif choice == '2':
+                model = Seq2SeqLSTM(
+                    input_size=input_size,
+                    hidden_size=hidden,
+                    output_size=cfg['output_size'],
+                    output_feature_size=cfg['output_feature_size'],
+                    num_layers=layers,
+                    dropout=drop,
+                    use_residual=use_residual
+                )
+
+            model = model.to(device)
+
+            model, best_val_loss, train_losses, val_losses = train_model(
+                model=model,
+                train_data=(X_train, y_train),
+                val_data=(X_val, y_val),
+                epochs=cfg['epochs'],
+                lr=lr,
+                patience=patience,
+                device=device,
+                batch_size=batch_size,
+                loss_type=loss_type,
+                grad_clip=cfg['grad_clip'],
+                weight_decay=wd
             )
-        elif choice == '2':
-            model = Seq2SeqLSTM(
-                input_size=input_size,         # 🆕 自动计算
-                hidden_size=hidden,
-                output_size=cfg['output_size'],
-                output_feature_size=cfg['output_feature_size'],
-                num_layers=layers,
-                dropout=drop,
-                use_residual=use_residual       # 🆕 残差跳跃连接
+
+            overall_mape, overall_mse, overall_mae, overall_r2, pred, true = evaluate_model(
+                model=model,
+                X_test=X_test,
+                y_test=y_test,
+                scaler_y=scaler_y,
+                device=device
             )
 
-        model = model.to(device)
+            print(f"R2={overall_r2:.4f} | MAPE={overall_mape:.2f}% | MSE={overall_mse:.6f} | MAE={overall_mae:.6f}")
 
-        # 🎯 修改：传入 device 参数，由 trainer 在内部按批次调度显存
-        model, best_val_loss, train_losses, val_losses = train_model(
-            model=model,
-            train_data=(X_train, y_train),
-            val_data=(X_val, y_val),
-            epochs=cfg['epochs'],
-            lr=lr,
-            patience=patience,
-            device=device,
-            batch_size=batch_size,
-            loss_type=loss_type,
-            grad_clip=cfg['grad_clip']
-        )
+            model_name = "LSTM" if choice == '1' else "Seq2SeqLSTM"
+            base_filename = f"{model_name}_h{hidden}_l{layers}_drop{drop}_lr{lr}_{loss_type}_mape_{overall_mape:.2f}_seq{seq_len}"
 
-        # 🎯 修改：传入 device 参数，让 evaluate_model 安全推理
-        overall_mape, overall_mse, overall_mae, overall_r2, pred, true = evaluate_model(
-            model=model,
-            X_test=X_test,
-            y_test=y_test,
-            scaler_y=scaler_y,
-            device=device
-        )
-        
-        print(f"测试集整体 R² (决定系数): {overall_r2:.4f} , MSE: {overall_mse:.6f} , MAE: {overall_mae:.6f} (辅助MAPE: {overall_mape:.2f}%)")
+            # MAPE 驱动分类
+            if overall_mape < 5.0:
+                current_save_dir = os.path.join(cfg['result_root'], "accuracy_high")
+                print(f"  MAPE {overall_mape:.2f}% < 5% -> accuracy_high/")
+            else:
+                current_save_dir = os.path.join(cfg['result_root'], "other")
+                print(f"  MAPE {overall_mape:.2f}% >= 5% -> other/")
 
-        model_name = "LSTM" if choice == '1' else "Seq2SeqLSTM"
-        base_filename = f"{model_name}_h{hidden}_l{layers}_drop{drop}_lr{lr}_{loss_type}_r2_{overall_r2:.4f}"
+            save_path = save_model(
+                model=model,
+                scaler_X=scaler_X,
+                scaler_y=scaler_y,
+                params={
+                    'model_type': model_name,
+                    'hidden_size': hidden,
+                    'num_layers': layers,
+                    'dropout': drop,
+                    'learning_rate': lr,
+                    'patience': patience,
+                    'seq_len': seq_len,
+                    'output_size': cfg['output_size'],
+                    'loss_type': loss_type,
+                    'weight_decay': wd,
+                    'mape': overall_mape,
+                    'r2_score': overall_r2,
+                    'input_size': input_size,
+                    'use_residual': use_residual,
+                    'use_time_features': use_time_features,
+                    'use_log_transform': use_log_transform,
+                },
+                overall_r2=overall_r2,
+                save_dir=current_save_dir,
+                filename=base_filename + '.pth'
+            )
+            plot_loss_curves(train_losses, val_losses, current_save_dir, base_filename)
 
-        # 根据 R2 分数进行筛选分类
-        if overall_r2 >= 0.80 and overall_mape <= 10:  # 设定双重筛选条件，确保模型不仅 R2 高，还要 MAPE 低
-            current_save_dir = os.path.join(cfg['result_root'], "accuracy_high")
-            print(f"✅ R² 分数 {overall_r2:.4f} >= 0.80 且 MAPE {overall_mape:.2f}% <= 10%，存入 accuracy_high/ 文件夹")
-        else:
-            current_save_dir = os.path.join(cfg['result_root'], "other")
-            print(f"⚠️ R² 分数 {overall_r2:.4f} < 0.80 或 MAPE {overall_mape:.2f}% > 10%，存入 other/ 文件夹")
-    
-        save_path = save_model(
-            model=model,
-            scaler_X=scaler_X,
-            scaler_y=scaler_y,
-            params={
-                'model_type': model_name,
-                'hidden_size': hidden,
-                'num_layers': layers,
-                'dropout': drop,
-                'learning_rate': lr,
-                'patience': patience,
-                'seq_len': cfg['seq_length'],
-                'output_size': cfg['output_size'],
-                'loss_type': loss_type,
-                'r2_score': overall_r2,
-                'input_size': input_size,              # 🆕
-                'use_residual': use_residual,          # 🆕
-                'use_time_features': use_time_features, # 🆕
-            },
-            overall_r2=overall_r2,
-            save_dir=current_save_dir,
-            filename=base_filename + '.pth'
-        )
-        plot_loss_curves(train_losses, val_losses, current_save_dir, base_filename)
+            if overall_mape < best_overall_mape:
+                best_overall_mape = overall_mape
+                best_model_info = {
+                    'path': save_path,
+                    'dir': current_save_dir,
+                    'base_filename': base_filename,
+                    'mape': overall_mape
+                }
 
-        # 记录并更新全局 R2 最高的模型
-        if overall_r2 > best_overall_r2:
-            best_overall_r2 = overall_r2
-            best_model_info = {
-                'path': save_path,
-                'dir': current_save_dir,
-                'base_filename': base_filename,
-                'r2': overall_r2
-            }
-
-    # ---------- 3. 筛选结束，将本次运行的最高分模型复制到 first ----------
+    # ---------- 4. 最佳模型 → first ----------
     print("\n" + "=" * 60)
     if best_model_info:
-        print(f"所有训练完成！本次网格搜索最佳模型 R² = {best_overall_r2:.4f}")
+        print(f"所有训练完成! 最佳 MAPE = {best_model_info['mape']:.2f}%")
         first_dir = os.path.join(cfg['result_root'], "first")
+        if os.path.exists(first_dir):
+            shutil.rmtree(first_dir)
         os.makedirs(first_dir, exist_ok=True)
-        
+
         best_dir = best_model_info['dir']
         base_name = best_model_info['base_filename']
-        
+
         copied_files = []
         for file_name in os.listdir(best_dir):
             if file_name.startswith(base_name):
@@ -215,10 +236,10 @@ def main():
                 dst_path = os.path.join(first_dir, file_name)
                 shutil.copy2(src_path, dst_path)
                 copied_files.append(file_name)
-                
-        print(f"🏆 最佳模型(R²={best_overall_r2:.4f})相关文件已成功提拔并复制到: {first_dir}")
+
+        print(f"最佳模型 (MAPE={best_model_info['mape']:.2f}%) 已复制到: {first_dir}")
         for cf in copied_files:
-            print(f"  - 复制成功: {cf}")
+            print(f"  - {cf}")
     print("=" * 60)
 
 if __name__ == "__main__":

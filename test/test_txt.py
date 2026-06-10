@@ -2,11 +2,13 @@ import os
 import numpy as np
 from datetime import datetime
 
-def generate_report(model, scaler_X, scaler_y, seq_len, output_size, 
-                    data_series, model_name, test_csv_name, target_col, output_dir, device):
+def generate_report(model, scaler_X, scaler_y, seq_len, output_size,
+                    data_series, model_name, test_csv_name, target_col, output_dir, device,
+                    use_time_features=False, data_start_offset=0):
     """
     生成详细的预测报告文本文件，并保存到指定目录。
     作为模块被 test.py 调用，直接复用内存中的模型，无需重新加载。
+    🆕 v2: 支持时间特征和全局位置偏移
     """
     # 局部导入防止循环引用 (Circular Import)
     from test import compute_mape, predict_sequence
@@ -24,15 +26,21 @@ def generate_report(model, scaler_X, scaler_y, seq_len, output_size,
     for i in range(max_windows + 1):
         hist = data_series[i : i + seq_len]
         future = data_series[i + seq_len : i + seq_len + output_size]
-        
-        # 调用 test.py 中的预测逻辑
-        pred = predict_sequence(model, scaler_X, scaler_y, hist, device)
+
+        # 🆕 传递 start_idx 和时间特征参数
+        global_start = data_start_offset + i
+        pred = predict_sequence(
+            model, scaler_X, scaler_y, hist, device,
+            start_idx=global_start,
+            use_time_features=use_time_features
+        )
 
         # 计算 MAPE 误差
         window_mape = compute_mape(future, pred)
         point_errors = [compute_mape(np.array([future[j]]), np.array([pred[j]])) for j in range(output_size)]
 
         windows_info.append({
+            'original_idx': i,  # 记录这原本是第几次预测
             'start_idx': i,
             'window_mape': window_mape,
             'future_true': future,
@@ -59,8 +67,7 @@ def generate_report(model, scaler_X, scaler_y, seq_len, output_size,
         f"  目标字段: {target_col}",
         f"  滑动窗口总数: {max_windows + 1}",
         f"  整体 MAPE: {overall_mape:.4f}%",
-        f"  整体准确率: {100 - overall_mape:.2f}%\n",
-        "【详细预测数据 (截取前5次与最后5次)】"
+        f"  整体准确率: {100 - overall_mape:.2f}%\n"
     ]
 
     def format_window(idx, info):
@@ -76,6 +83,19 @@ def generate_report(model, scaler_X, scaler_y, seq_len, output_size,
         lines.append("")
         return lines
 
+    # ---------- 🆕 先记录 MAPE > 5% 的异常窗口 ----------
+    high_error_windows = [info for info in windows_info if info['window_mape'] > 5.0]
+    
+    if high_error_windows:
+        report_lines.append(f"【异常预测记录 (窗口 MAPE > 5%, 共计 {len(high_error_windows)} 次)】")
+        for info in high_error_windows:
+            report_lines.extend(format_window(info['original_idx'], info))
+    else:
+        report_lines.append("【异常预测记录 (窗口 MAPE > 5%)】\n  所有预测窗口的 MAPE 均未超过 5%。\n")
+
+    # ---------- 记录详细预测数据 (前5次与最后5次) ----------
+    report_lines.append("【详细预测数据 (截取前5次与最后5次)】")
+
     # 前5次
     for i in range(min(5, len(windows_info))):
         report_lines.extend(format_window(i, windows_info[i]))
@@ -83,7 +103,9 @@ def generate_report(model, scaler_X, scaler_y, seq_len, output_size,
     # 最后5次
     if len(windows_info) > 5:
         report_lines.append("...\n【最后5次预测详情】")
-        for i in range(len(windows_info) - 5, len(windows_info)):
+        # 防止首尾重叠，确保取到的不包含前5次已取过的部分
+        start_idx_for_last_5 = max(5, len(windows_info) - 5)
+        for i in range(start_idx_for_last_5, len(windows_info)):
             report_lines.extend(format_window(i, windows_info[i]))
 
     # 保存文件到动态生成的模型文件夹中
@@ -91,4 +113,4 @@ def generate_report(model, scaler_X, scaler_y, seq_len, output_size,
     with open(output_txt_path, 'w', encoding='utf-8') as f:
         f.write('\n'.join(report_lines))
 
-    print(f"✅ 详细报告已保存至: {output_txt_path}")
+    print(f"[OK] 详细报告已保存至: {output_txt_path}")
