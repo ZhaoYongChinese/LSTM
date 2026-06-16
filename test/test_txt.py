@@ -3,14 +3,11 @@ import numpy as np
 from datetime import datetime
 
 def generate_report(model, scaler_X, scaler_y, seq_len, output_size,
-                    data_series, model_name, test_csv_name, target_col, output_dir, device,
-                    use_time_features=False, data_start_offset=0):
+                    data_series, model_name, test_csv_name, target_col, output_dir, device):
     """
     生成详细的预测报告文本文件，并保存到指定目录。
     作为模块被 test.py 调用，直接复用内存中的模型，无需重新加载。
-    🆕 v2: 支持时间特征和全局位置偏移
     """
-    # 局部导入防止循环引用 (Circular Import)
     from test import compute_mape, predict_sequence
 
     total_len = len(data_series)
@@ -26,14 +23,7 @@ def generate_report(model, scaler_X, scaler_y, seq_len, output_size,
     for i in range(max_windows + 1):
         hist = data_series[i : i + seq_len]
         future = data_series[i + seq_len : i + seq_len + output_size]
-
-        # 🆕 传递 start_idx 和时间特征参数
-        global_start = data_start_offset + i
-        pred = predict_sequence(
-            model, scaler_X, scaler_y, hist, device,
-            start_idx=global_start,
-            use_time_features=use_time_features
-        )
+        pred = predict_sequence(model, scaler_X, scaler_y, hist, device)
 
         # 计算 MAPE 误差
         window_mape = compute_mape(future, pred)

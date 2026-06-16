@@ -136,11 +136,6 @@ def evaluate_model(model, X_test, y_test, scaler_y, device):
             pred = scaler_y.inverse_transform(pred_np)
             true = scaler_y.inverse_transform(true_np)
 
-        # Log 逆变换: 如果训练时做了 log，这里 exp 还原到原始量纲
-        if getattr(scaler_y, 'use_log_transform', False):
-            pred = np.exp(pred)
-            true = np.exp(true)
-
     # 🎯 调用本地 metrics.py 的 compute_r2
     overall_r2 = compute_r2(true, pred)
     overall_mape = compute_mape(true, pred)

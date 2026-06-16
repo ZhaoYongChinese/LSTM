@@ -115,60 +115,30 @@ def load_model(checkpoint_path, device='cpu'):
 
     print(f"[OK] 模型加载成功: {model_type} | hidden={hidden_size}, layers={num_layers}")
     print(f"   seq_len={seq_len}, out_len={output_size}, input_size={ckpt_input_size}")
-    print(f"   residual={use_residual}, time_feat={use_time_features}")
-    return model, scaler_X, scaler_y, seq_len, output_size, use_time_features  # 🆕 多返回一个值
+    print(f"   residual={use_residual}")
+    return model, scaler_X, scaler_y, seq_len, output_size
 
 def compute_mape(y_true, y_pred, epsilon=1e-8):
     return np.mean(np.abs((y_true - y_pred) / (y_true + epsilon))) * 100
 
-def predict_sequence(model, scaler_X, scaler_y, input_seq, device='cpu',
-                     start_idx=0, use_time_features=False, period=47):
-    """
-    🆕 v2: 支持时间特征编码 + 统一scaler (1特征) / 旧版scaler (47特征)
-    参数:
-        input_seq: 原始RMS值序列 [seq_len]
-        start_idx: 该序列在原数据中的起始索引 (用于计算日内位置)
-        use_time_features: 是否拼接 sin/cos 时间通道
-        period: 日内周期步数
-    """
+def predict_sequence(model, scaler_X, scaler_y, input_seq, device='cpu'):
+    """单变量RMS预测: 归一化 → 推理 → 反归一化"""
     n = len(input_seq)
     rms_norm = scaler_X.transform(input_seq.reshape(-1, 1)).reshape(1, n, 1)
-
-    if use_time_features:
-        positions = np.arange(start_idx, start_idx + n) % period
-        sin_feat = np.sin(2 * np.pi * positions / period).astype(np.float32).reshape(1, n, 1)
-        cos_feat = np.cos(2 * np.pi * positions / period).astype(np.float32).reshape(1, n, 1)
-        input_norm = np.concatenate([rms_norm, sin_feat, cos_feat], axis=2)  # [1, n, 3]
-    else:
-        input_norm = rms_norm  # [1, n, 1]
-
-    input_tensor = torch.FloatTensor(input_norm).to(device)
+    input_tensor = torch.FloatTensor(rms_norm).to(device)
     with torch.no_grad():
         pred_norm = model(input_tensor)
     pred_np = pred_norm.cpu().numpy()
     if pred_np.ndim == 1:
         pred_np = pred_np.reshape(1, -1)
-
-    # 兼容统一scaler (1特征) 和旧版scaler (47特征)
     if hasattr(scaler_y, 'n_features_in_') and scaler_y.n_features_in_ == 1:
         pred = scaler_y.inverse_transform(pred_np.reshape(-1, 1)).reshape(pred_np.shape).flatten()
     else:
         pred = scaler_y.inverse_transform(pred_np).flatten()
-
-    # Log 逆变换: 如果训练时做了 log，这里 exp 还原到原始量纲
-    if getattr(scaler_y, 'use_log_transform', False):
-        pred = np.exp(pred)
-
     return pred
 
 def create_animation(model, scaler_X, scaler_y, seq_len, output_size,
-                     data_series, save_path='prediction.gif', fps=2,
-                     use_time_features=False, data_start_offset=0):
-    """
-    🆕 v2: 支持时间特征参数传递
-    参数:
-        data_start_offset: 测试数据在原数据中的起始索引 (用于日内位置计算)
-    """
+                     data_series, save_path='prediction.gif', fps=2):
     device = next(model.parameters()).device
     total_len = len(data_series)
     max_start_idx = total_len - seq_len - output_size
@@ -186,14 +156,7 @@ def create_animation(model, scaler_X, scaler_y, seq_len, output_size,
         ax.clear()
         hist_true = data_series[i : i + seq_len]
         future_true = data_series[i + seq_len : i + seq_len + output_size]
-
-        # 🆕 传递 start_idx 和时间特征参数
-        global_start = data_start_offset + i
-        pred = predict_sequence(
-            model, scaler_X, scaler_y, hist_true, device,
-            start_idx=global_start,           # 🆕 全局位置索引
-            use_time_features=use_time_features # 🆕
-        )
+        pred = predict_sequence(model, scaler_X, scaler_y, hist_true, device)
 
         all_true_accum.append(future_true)
         all_pred_accum.append(pred)
@@ -304,9 +267,9 @@ def main():
     # ---------- 加载模型 ----------
     print("\n正在加载模型...")
     (model, scaler_X, scaler_y,
-     seq_len, output_size, use_time_features) = load_model(model_path, device)  # 🆕 解包新返回值
+     seq_len, output_size) = load_model(model_path, device)
 
-    # ---------- 🆕 从文件夹加载并拼接所有CSV，取末尾 X% ----------
+    # ---------- 从文件夹加载并拼接所有CSV，取末尾 X% ----------
     print(f"\n正在从文件夹加载CSV数据: {data_dir}")
     csv_files = sorted([f for f in os.listdir(data_dir) if f.endswith('.csv')])
     if not csv_files:
@@ -331,17 +294,14 @@ def main():
     # 取末尾 test_percent% 作为测试数据
     test_len = max(int(total_len * test_percent / 100), seq_len + output_size)
     data_series = full_series[-test_len:]
-    data_start_offset = total_len - test_len  # 🆕 测试数据在全局中的起始索引
-    print(f"测试数据: 末尾 {test_len} 个点 ({test_percent}%), 全局起始索引={data_start_offset}")
+    print(f"测试数据: 末尾 {test_len} 个点 ({test_percent}%)")
 
     # ---------- 执行预测与生成动画 ----------
     print("\n正在生成预测动画...")
     gif_path = os.path.join(show_dir, f"{model_name_no_ext}_animation.gif")
     final_acc = create_animation(
         model, scaler_X, scaler_y, seq_len, output_size,
-        data_series, save_path=gif_path, fps=FPS,
-        use_time_features=use_time_features,       # 🆕
-        data_start_offset=data_start_offset         # 🆕
+        data_series, save_path=gif_path, fps=FPS
     )
     print(f"最终整体准确率: {final_acc:.2f}%")
 
@@ -356,10 +316,7 @@ def main():
             test_csv_name=f"{os.path.basename(data_dir)} (末尾{test_percent}%)",
             target_col=TARGET_COLUMN,
             output_dir=show_dir,
-            device=device,
-            # 🆕 传递时间特征参数
-            use_time_features=use_time_features,
-            data_start_offset=data_start_offset
+            device=device
         )
     else:
         print("已跳过文本报告生成。")
