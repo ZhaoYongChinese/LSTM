@@ -10,6 +10,10 @@ import tkinter as tk
 from tkinter import filedialog
 from datetime import datetime
 
+import optuna
+from optuna.samplers import TPESampler
+from optuna.pruners import MedianPruner
+
 from utils.data_loader import load_multiple_csv
 from utils.trainer import train_model, evaluate_model, save_model
 from utils.plotting import plot_loss_curves
@@ -52,7 +56,7 @@ def get_data_dir_via_gui(configured_path):
     return selected_dir
 
 def main():
-    log_dir = "log"
+    log_dir = "logs"
     os.makedirs(log_dir, exist_ok=True)
     # ---- 日志: 同步输出到控制台和文件 ----
     log_filename = f"training_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
@@ -108,18 +112,29 @@ def main():
 
     batch_size = cfg.get('batch_size', 64)
 
-    # ---------- 2. 参数网格 ----------
-    weight_decays = cfg.get('weight_decay', [0])
-    if not isinstance(weight_decays, list):
-        weight_decays = [weight_decays]
+    # ---------- 2. Optuna 超参搜索配置 ----------
+    optuna_trials = cfg.get('optuna_trials', 0)
 
-    param_combinations = list(itertools.product(
-        cfg['hidden_size'], cfg['num_layers'], cfg['dropout'],
-        cfg['learning_rate'], cfg['patience'], cfg['loss_type'], weight_decays
-    ))
-    per_data = len(param_combinations)
-    total = per_data * len(seq_lengths) * len(output_sizes)
-    print(f"\n每组(seq_len,out_size)下 {per_data} 组参数 × {len(seq_lengths)}×{len(output_sizes)} = 共 {total} 组")
+    # 参数范围 (从 config 列表提取 min/max 用于 Optuna 连续采样)
+    lr_min, lr_max = min(cfg['learning_rate']), max(cfg['learning_rate'])
+    wd_list = cfg.get('weight_decay', [0])
+    if not isinstance(wd_list, list): wd_list = [wd_list]
+    wd_min, wd_max = min(wd_list), max(wd_list)
+    patience_min, patience_max = min(cfg['patience']), max(cfg['patience'])
+    layers_min, layers_max = min(cfg['num_layers']), max(cfg['num_layers'])
+    dropout_min, dropout_max = min(cfg['dropout']), max(cfg['dropout'])
+
+    if optuna_trials > 0:
+        total = optuna_trials * len(seq_lengths) * len(output_sizes)
+        print(f"\n[Optuna] TPE采样 + MedianPruner | 每组{optuna_trials}次 × {len(seq_lengths)}×{len(output_sizes)} = 共{total}次")
+    else:
+        # 回退到旧网格搜索
+        param_combinations = list(itertools.product(
+            cfg['hidden_size'], cfg['num_layers'], cfg['dropout'],
+            cfg['learning_rate'], cfg['patience'], cfg['loss_type'], wd_list
+        ))
+        total = len(param_combinations) * len(seq_lengths) * len(output_sizes)
+        print(f"\n[网格] {len(param_combinations)}组 × {len(seq_lengths)}×{len(output_sizes)} = 共{total}组")
 
     best_overall_mape = float('inf')
     best_model_info = None
@@ -145,104 +160,162 @@ def main():
                 stride=stride_cfg
             )
 
-            # ---------- 内层: 其他参数网格 ----------
-            for hidden, layers, drop, lr, patience, loss_type, wd in param_combinations:
-                global_counter += 1
-                print("\n" + "-" * 50)
-                print(f"进度: {global_counter}/{total} | seq_len={seq_len}, out={out_size}")
-                print(f"参数: hidden={hidden}, layers={layers}, dropout={drop}, lr={lr}, patience={patience}, loss={loss_type}, wd={wd}")
+            # ============================================================
+            # 内层: Optuna TPE 搜索 (或网格回退)
+            # ============================================================
+            if optuna_trials > 0:
+                # ---- Optuna 路径 ----
+                def objective(trial):
+                    nonlocal global_counter, best_overall_mape, best_model_info
 
-                if choice == '1':
-                    model = LSTMMultiStep(
-                        input_size=input_size,
-                        hidden_size=hidden,
-                        output_size=out_size,
-                        num_layers=layers,
-                        dropout=drop,
-                        use_layer_norm=cfg['use_layer_norm'],
-                        use_residual=use_residual
+                    hidden = trial.suggest_categorical('hidden_size', cfg['hidden_size'])
+                    layers = trial.suggest_int('num_layers', layers_min, layers_max)
+                    dropout = trial.suggest_float('dropout', dropout_min, dropout_max)
+                    lr = trial.suggest_float('lr', lr_min, lr_max, log=True)
+                    patience = trial.suggest_int('patience', patience_min, patience_max)
+                    loss_type = trial.suggest_categorical('loss_type', cfg['loss_type'])
+                    if wd_max > 0 and wd_min > 0:
+                        wd = trial.suggest_float('weight_decay', wd_min, wd_max, log=True)
+                    elif wd_max > 0:
+                        wd = trial.suggest_float('weight_decay', 1e-10, wd_max, log=True)
+                    else:
+                        wd = 0.0
+
+                    global_counter += 1
+                    print("\n" + "-" * 50)
+                    print(f"[Optuna] Trial #{trial.number} | 进度: {global_counter}/{total} | seq_len={seq_len}, out={out_size}")
+                    print(f"参数: hidden={hidden}, layers={layers}, dropout={dropout:.4f}, lr={lr:.6f}, patience={patience}, loss={loss_type}, wd={wd:.6f}")
+
+                    if choice == '1':
+                        model = LSTMMultiStep(input_size=input_size, hidden_size=hidden,
+                                              output_size=out_size, num_layers=layers,
+                                              dropout=dropout, use_layer_norm=cfg['use_layer_norm'],
+                                              use_residual=use_residual)
+                    else:
+                        model = Seq2SeqLSTM(input_size=input_size, hidden_size=hidden,
+                                            output_size=out_size, num_layers=layers,
+                                            dropout=dropout, use_residual=use_residual)
+                    model = model.to(device)
+
+                    model, _, train_losses, val_losses = train_model(
+                        model=model, train_data=(X_train, y_train), val_data=(X_val, y_val),
+                        epochs=cfg['epochs'], lr=lr, patience=patience, device=device,
+                        batch_size=batch_size, loss_type=loss_type, grad_clip=cfg['grad_clip'],
+                        weight_decay=wd
                     )
-                elif choice == '2':
-                    model = Seq2SeqLSTM(
-                        input_size=input_size,
-                        hidden_size=hidden,
-                        output_size=out_size,
-                        num_layers=layers,
-                        dropout=drop,
-                        use_residual=use_residual
+
+                    mape, mse, mae, r2, pred, true = evaluate_model(
+                        model=model, X_test=X_test, y_test=y_test, scaler_y=scaler_y, device=device
                     )
 
-                model = model.to(device)
+                    print(f"R2={r2:.4f} | MAPE={mape:.2f}% | MSE={mse:.6f} | MAE={mae:.6f}")
 
-                model, best_val_loss, train_losses, val_losses = train_model(
-                    model=model,
-                    train_data=(X_train, y_train),
-                    val_data=(X_val, y_val),
-                    epochs=cfg['epochs'],
-                    lr=lr,
-                    patience=patience,
-                    device=device,
-                    batch_size=batch_size,
-                    loss_type=loss_type,
-                    grad_clip=cfg['grad_clip'],
-                    weight_decay=wd
+                    model_name = "LSTM" if choice == '1' else "Seq2SeqLSTM"
+                    base_filename = f"{model_name}_h{hidden}_l{layers}_drop{dropout:.4f}_lr{lr:.6f}_{loss_type}_mape_{mape:.2f}_in{seq_len}_out{out_size}"
+
+                    if mape < 5.0:
+                        save_dir = os.path.join(cfg['result_root'], "accuracy_high")
+                        print(f"  MAPE {mape:.2f}% < 5% -> accuracy_high/")
+                    else:
+                        save_dir = os.path.join(cfg['result_root'], "other")
+                        print(f"  MAPE {mape:.2f}% >= 5% -> other/")
+
+                    save_path = save_model(
+                        model=model, scaler_X=scaler_X, scaler_y=scaler_y,
+                        params={'model_type': model_name, 'hidden_size': hidden,
+                                'num_layers': layers, 'dropout': dropout,
+                                'learning_rate': lr, 'patience': patience,
+                                'seq_len': seq_len, 'output_size': out_size,
+                                'loss_type': loss_type, 'weight_decay': wd,
+                                'mape': mape, 'r2_score': r2, 'input_size': input_size,
+                                'use_residual': use_residual, 'value_threshold': value_threshold},
+                        overall_r2=r2, save_dir=save_dir, filename=base_filename + '.pth'
+                    )
+                    plot_loss_curves(train_losses, val_losses, save_dir, base_filename)
+
+                    if mape < best_overall_mape:
+                        best_overall_mape = mape
+                        best_model_info = {'path': save_path, 'dir': save_dir,
+                                           'base_filename': base_filename, 'mape': mape}
+
+                    # MedianPruner: 报告当前 trial 的中间值用于剪枝
+                    trial.report(mape, step=0)
+                    if trial.should_prune():
+                        raise optuna.TrialPruned()
+
+                    return mape
+
+                study = optuna.create_study(
+                    direction='minimize',
+                    sampler=TPESampler(seed=cfg['random_seed']),
+                    pruner=MedianPruner(n_startup_trials=5, n_warmup_steps=0, interval_steps=1)
                 )
+                study.optimize(objective, n_trials=optuna_trials, show_progress_bar=False)
 
-                overall_mape, overall_mse, overall_mae, overall_r2, pred, true = evaluate_model(
-                    model=model,
-                    X_test=X_test,
-                    y_test=y_test,
-                    scaler_y=scaler_y,
-                    device=device
-                )
+                print(f"\n[Optuna] 本组最佳: MAPE={study.best_value:.2f}% | 参数={study.best_params}")
 
-                print(f"R2={overall_r2:.4f} | MAPE={overall_mape:.2f}% | MSE={overall_mse:.6f} | MAE={overall_mae:.6f}")
+            else:
+                # ---- 旧网格路径 (optuna_trials=0 时使用) ----
+                param_combinations = list(itertools.product(
+                    cfg['hidden_size'], cfg['num_layers'], cfg['dropout'],
+                    cfg['learning_rate'], cfg['patience'], cfg['loss_type'], wd_list
+                ))
+                for hidden, layers, drop, lr, patience, loss_type, wd in param_combinations:
+                    global_counter += 1
+                    print("\n" + "-" * 50)
+                    print(f"进度: {global_counter}/{total} | seq_len={seq_len}, out={out_size}")
+                    print(f"参数: hidden={hidden}, layers={layers}, dropout={drop}, lr={lr}, patience={patience}, loss={loss_type}, wd={wd}")
 
-                model_name = "LSTM" if choice == '1' else "Seq2SeqLSTM"
-                base_filename = f"{model_name}_h{hidden}_l{layers}_drop{drop}_lr{lr}_{loss_type}_mape_{overall_mape:.2f}_in{seq_len}_out{out_size}"
+                    if choice == '1':
+                        model = LSTMMultiStep(input_size=input_size, hidden_size=hidden,
+                                              output_size=out_size, num_layers=layers,
+                                              dropout=drop, use_layer_norm=cfg['use_layer_norm'],
+                                              use_residual=use_residual)
+                    else:
+                        model = Seq2SeqLSTM(input_size=input_size, hidden_size=hidden,
+                                            output_size=out_size, num_layers=layers,
+                                            dropout=drop, use_residual=use_residual)
+                    model = model.to(device)
 
-                if overall_mape < 5.0:
-                    current_save_dir = os.path.join(cfg['result_root'], "accuracy_high")
-                    print(f"  MAPE {overall_mape:.2f}% < 5% -> accuracy_high/")
-                else:
-                    current_save_dir = os.path.join(cfg['result_root'], "other")
-                    print(f"  MAPE {overall_mape:.2f}% >= 5% -> other/")
+                    model, _, train_losses, val_losses = train_model(
+                        model=model, train_data=(X_train, y_train), val_data=(X_val, y_val),
+                        epochs=cfg['epochs'], lr=lr, patience=patience, device=device,
+                        batch_size=batch_size, loss_type=loss_type, grad_clip=cfg['grad_clip'],
+                        weight_decay=wd
+                    )
 
-                save_path = save_model(
-                    model=model,
-                    scaler_X=scaler_X,
-                    scaler_y=scaler_y,
-                    params={
-                        'model_type': model_name,
-                        'hidden_size': hidden,
-                        'num_layers': layers,
-                        'dropout': drop,
-                        'learning_rate': lr,
-                        'patience': patience,
-                        'seq_len': seq_len,
-                        'output_size': out_size,
-                        'loss_type': loss_type,
-                        'weight_decay': wd,
-                        'mape': overall_mape,
-                        'r2_score': overall_r2,
-                        'input_size': input_size,
-                        'use_residual': use_residual,
-                        'value_threshold': value_threshold,
-                    },
-                    overall_r2=overall_r2,
-                    save_dir=current_save_dir,
-                    filename=base_filename + '.pth'
-                )
-                plot_loss_curves(train_losses, val_losses, current_save_dir, base_filename)
+                    mape, mse, mae, r2, pred, true = evaluate_model(
+                        model=model, X_test=X_test, y_test=y_test, scaler_y=scaler_y, device=device
+                    )
+                    print(f"R2={r2:.4f} | MAPE={mape:.2f}% | MSE={mse:.6f} | MAE={mae:.6f}")
 
-                if overall_mape < best_overall_mape:
-                    best_overall_mape = overall_mape
-                    best_model_info = {
-                        'path': save_path,
-                        'dir': current_save_dir,
-                        'base_filename': base_filename,
-                        'mape': overall_mape
-                    }
+                    model_name = "LSTM" if choice == '1' else "Seq2SeqLSTM"
+                    base_filename = f"{model_name}_h{hidden}_l{layers}_drop{drop}_lr{lr}_{loss_type}_mape_{mape:.2f}_in{seq_len}_out{out_size}"
+
+                    if mape < 5.0:
+                        save_dir = os.path.join(cfg['result_root'], "accuracy_high")
+                        print(f"  MAPE {mape:.2f}% < 5% -> accuracy_high/")
+                    else:
+                        save_dir = os.path.join(cfg['result_root'], "other")
+                        print(f"  MAPE {mape:.2f}% >= 5% -> other/")
+
+                    save_path = save_model(
+                        model=model, scaler_X=scaler_X, scaler_y=scaler_y,
+                        params={'model_type': model_name, 'hidden_size': hidden,
+                                'num_layers': layers, 'dropout': drop,
+                                'learning_rate': lr, 'patience': patience,
+                                'seq_len': seq_len, 'output_size': out_size,
+                                'loss_type': loss_type, 'weight_decay': wd,
+                                'mape': mape, 'r2_score': r2, 'input_size': input_size,
+                                'use_residual': use_residual, 'value_threshold': value_threshold},
+                        overall_r2=r2, save_dir=save_dir, filename=base_filename + '.pth'
+                    )
+                    plot_loss_curves(train_losses, val_losses, save_dir, base_filename)
+
+                    if mape < best_overall_mape:
+                        best_overall_mape = mape
+                        best_model_info = {'path': save_path, 'dir': save_dir,
+                                           'base_filename': base_filename, 'mape': mape}
 
     # ---------- 4. 最佳模型 → first ----------
     print("\n" + "=" * 60)

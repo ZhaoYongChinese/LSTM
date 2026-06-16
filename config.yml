@@ -27,8 +27,11 @@ stride: null                        # 滑动窗口步长 (null=自动计算, 或
 # 5. 训练过程与优化器参数
 epochs: 400                        # 最大训练轮数
 batch_size: 64                     # 批处理大小
-learning_rate: [0.0002, 0.0005, 0.001]  # 学习率列表
-patience: [12, 18]             # 早停耐心值列表
+learning_rate: [0.0002, 0.0005, 0.001]  # 学习率列表 (Optuna 将在 min~max 间连续采样)
+patience: [12, 18]                 # 早停耐心值范围
 loss_type: ['huber', 'mse']        # 损失函数类型列表
-weight_decay: [0, 0.00001, 0.0001]      # AdamW 权重衰减
+weight_decay: [0, 0.00001, 0.0001] # AdamW 权重衰减 (Optuna 将在 min~max 间连续采样)
 grad_clip: 1.0                     # 梯度裁剪阈值
+
+# 6. Optuna 超参搜索
+optuna_trials: 40                  # 每组(seq_len,out_size)的试验次数 (0=使用旧网格搜索)
