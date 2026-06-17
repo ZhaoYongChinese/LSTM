@@ -4,5 +4,5 @@ data/useless/
 show/
 other/
 logs/
-__pycache__/
+*__pycache__/
 result/

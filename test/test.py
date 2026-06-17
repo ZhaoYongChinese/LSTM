@@ -27,8 +27,7 @@ def load_model(checkpoint_path, device='cpu'):
     """
     加载训练好的模型、归一化器及相关参数。
     自动检测模型类型与层数, 兼容各种旧版checkpoint。
-    🆕 v2: 支持 input_size / use_residual / use_time_features 等新参数。
-    返回: model, scaler_X, scaler_y, seq_len, output_size, use_time_features
+    返回: model, scaler_X, scaler_y, seq_len, output_size, value_threshold
     """
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     params = checkpoint.get('params', {})
@@ -77,10 +76,10 @@ def load_model(checkpoint_path, device='cpu'):
         if output_size is None:
             raise ValueError("模型文件中缺少 output_size，无法继续。")
 
-    # 🆕 读取新参数（兼容旧 checkpoint，默认值回退）
+    # 读取新参数（兼容旧 checkpoint，默认值回退）
     ckpt_input_size = params.get('input_size', 1)
     use_residual = params.get('use_residual', False)
-    use_time_features = params.get('use_time_features', False)
+    value_threshold = params.get('value_threshold', None)
 
     if model_type == 'Seq2SeqLSTM':
         model = Seq2SeqLSTM(
@@ -115,8 +114,8 @@ def load_model(checkpoint_path, device='cpu'):
 
     print(f"[OK] 模型加载成功: {model_type} | hidden={hidden_size}, layers={num_layers}")
     print(f"   seq_len={seq_len}, out_len={output_size}, input_size={ckpt_input_size}")
-    print(f"   residual={use_residual}")
-    return model, scaler_X, scaler_y, seq_len, output_size
+    print(f"   residual={use_residual}, threshold={value_threshold}")
+    return model, scaler_X, scaler_y, seq_len, output_size, value_threshold
 
 def compute_mape(y_true, y_pred, epsilon=1e-8):
     return np.mean(np.abs((y_true - y_pred) / (y_true + epsilon))) * 100
@@ -149,11 +148,13 @@ def create_animation(model, scaler_X, scaler_y, seq_len, output_size,
     all_true_accum, all_pred_accum = [], []
     fig, ax = plt.subplots(figsize=(10, 6))
     plt.subplots_adjust(top=0.85)
+    ax.set_ylim(0.009,0.012)
     overall_acc = 0.0
 
     def animate(i):
         nonlocal overall_acc
         ax.clear()
+        ax.set_ylim(0.009,0.012)
         hist_true = data_series[i : i + seq_len]
         future_true = data_series[i + seq_len : i + seq_len + output_size]
         pred = predict_sequence(model, scaler_X, scaler_y, hist_true, device)
@@ -267,9 +268,9 @@ def main():
     # ---------- 加载模型 ----------
     print("\n正在加载模型...")
     (model, scaler_X, scaler_y,
-     seq_len, output_size) = load_model(model_path, device)
+     seq_len, output_size, value_threshold) = load_model(model_path, device)
 
-    # ---------- 从文件夹加载并拼接所有CSV，取末尾 X% ----------
+    # ---------- 从文件夹加载并拼接所有CSV，过滤停机数据，取末尾 X% ----------
     print(f"\n正在从文件夹加载CSV数据: {data_dir}")
     csv_files = sorted([f for f in os.listdir(data_dir) if f.endswith('.csv')])
     if not csv_files:
@@ -284,12 +285,18 @@ def main():
             print(f"警告: {file} 缺少列 '{TARGET_COLUMN}'，跳过")
             continue
         series = df[TARGET_COLUMN].values.astype(np.float32)
+        # 应用与训练时相同的阈值过滤
+        if value_threshold is not None:
+            series = series[series >= value_threshold]
+            if len(series) == 0:
+                print(f"警告: {file} 过滤后为空，跳过")
+                continue
         all_series_parts.append(series)
-        print(f"  {file}: {len(series)} 个时间步")
+        print(f"  {file}: {len(series)} 个时间步 (阈值>={value_threshold})")
 
     full_series = np.concatenate(all_series_parts)
     total_len = len(full_series)
-    print(f"全部数据总长度: {total_len} 个时间步")
+    print(f"过滤后数据总长度: {total_len} 个时间步")
 
     # 取末尾 test_percent% 作为测试数据
     test_len = max(int(total_len * test_percent / 100), seq_len + output_size)
